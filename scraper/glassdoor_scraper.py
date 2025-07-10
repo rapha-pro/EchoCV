@@ -126,9 +126,8 @@ class GlassdoorScraper:
                 'location': location,
                 'salary': salary,
                 'skills': skills,
-                'description_snippet': full_description,
+                'description': full_description,
                 'url': job_url,
-                'full_description': full_description,
             }
 
             print(f"✅ Extracted job {job_num}: {title} at {company}")

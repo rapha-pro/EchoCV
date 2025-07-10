@@ -13,6 +13,7 @@ pandas = "*"
 numpy = "*"
 pathlib = "*"
 langchain-groq = "*"
+langchain = "*"
 
 [dev-packages]
 
