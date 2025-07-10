@@ -224,13 +224,13 @@ class GlassdoorScraper:
         # Get the project root (one directory up from scraper/)
         current_file = Path(__file__)
         project_root = current_file.parent.parent
-        data_dir = project_root / "data"  # /jobflow/data/
+        data_dir = project_root / "data" / "scrapped_data"
 
         # Create data directory if it doesn't exist
         data_dir.mkdir(exist_ok=True)
         print(f"📁 Using data directory: {data_dir}")
 
-        # Add today's date to filename
+        # Add today's date to end of filename
         today = datetime.now().strftime("%d-%m-%Y")
         name_without_ext = filename.rsplit('.', 1)[0]  # Remove .csv extension
         dated_filename = f"{name_without_ext}_{today}.csv"

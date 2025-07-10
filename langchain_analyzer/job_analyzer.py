@@ -130,7 +130,7 @@ def test_single_job_analysis():
     """Test the chain-based analyzer"""
 
     # Load data
-    data_dir = Path(__file__).parent.parent / "data"
+    data_dir = Path(__file__).parent.parent / "data" / "scrapped_data"
     csv_files = list(data_dir.glob("glassdoor_jobs_*.csv"))
 
     if not csv_files:

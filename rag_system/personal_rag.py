@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import chromadb
@@ -18,11 +19,15 @@ class PersonalRAG:
     def __init__(self):
         """Initialize personal knowledge base"""
 
+        # Set up ChromaDB with explicit persistence
+        project_root = Path(__file__).parent.parent
+        cache_dir = project_root / "data" / "rag_knowledge_base_cache"
+        cache_dir.mkdir(exist_ok=True)
+
         # Set up ChromaDB
-        self.chroma_client = chromadb.Client(Settings(
-            persist_directory="rag_system/knowledge_base",
-            anonymized_telemetry=False
-        ))
+        self.chroma_client = chromadb.PersistentClient(
+            path=str(persist_dir)
+        )
 
         # Create or get collection
         self.collection = self.chroma_client.get_or_create_collection(
@@ -49,7 +54,16 @@ class PersonalRAG:
             separators=["\n\n", "\n", ". ", " "]
         )
 
-        print("Personal RAG system initialized")
+        # Only auto-load if completely empty
+        if self.collection.count() == 0:
+            print("\nEmpty knowledge base detected, auto-loading documents...")
+            self.load_personal_documents()
+        else:
+            print(f"\nLoaded existing knowledge base: {self.collection.count()} chunks\n")
+
+        print(ITALIC + BLINK + f"Personal RAG system initialized. "\
+                               f"ChromaDB persistence directory: {persist_dir}\n" + RESET)
+
 
     def get_knowledge_stats(self):
         """Show stats about personal knowledge base"""
@@ -60,7 +74,8 @@ class PersonalRAG:
             return "Knowledge base is empty"
 
         # Get sample of documents to show sources
-        sample = self.collection.get(limit=min(count, 10), include=["metadatas"])
+        sample = self.collection.get(include=["metadatas"])
+
         sources = set()
         doc_types = set()
 
@@ -68,14 +83,11 @@ class PersonalRAG:
             sources.add(metadata.get('source', 'unknown'))
             doc_types.add(metadata.get('doc_type', 'unknown'))
 
-        stats = f"""Knowledge Base Stats:
-       Total chunks: {count}
-       Sources: {', '.join(sources)}
-       Document types: {', '.join(doc_types)}"""
+        stats = f"""\nKnowledge Base Stats:\n+ Total chunks:{count}\n+ Sources:\n{', '.join(sources)}\n+ Document types: {', '.join(doc_types)}"""
 
         return stats
 
-    def search_knowledge(self, query, n_results=3):
+    def search_knowledge(self, query, n_results=5):
         """Search personal knowledge base"""
 
         try:
@@ -119,8 +131,9 @@ class PersonalRAG:
 
         Please provide a personalized, student-professional response that directly answers the question using specific 
         details from my background. Keep it concise but compelling. 
-        Use less ai-detectable words like: innovation, spearheaded... ai-words similar to these
-        DO NOT USE EM-DASHES-NEVER
+        DON'Ts
+        - DO NOT USE ai-detectable words like: innovation, spearheaded, cutting-edge, prospect, particularly drawn... ai-words similar to these in your answer
+        "- DO NOT USE EM-DASHES-NEVER
         """
 
         response = self.llm.invoke([HumanMessage(content=prompt)])
@@ -302,32 +315,11 @@ class PersonalRAG:
 
 
 
-def test_rag_system():
+def test_rag_system(rag):
     """Comprehensive test of the Personal RAG system"""
 
-    print("Personal RAG System Test")
+    print(MAGENTA + "Comprehensive Test" + RESET)
     print("=" * 40)
-
-    # Create the RAG system
-    rag = PersonalRAG()
-
-    # Show initial stats
-    print(f"\nInitial status: {rag.get_knowledge_stats()}")
-
-    # Try to load documents automatically
-    print(f"\nAuto-loading personal documents...")
-    loaded = rag.load_personal_documents()
-
-    if not loaded:
-        print("\nTo get started:")
-        print("1. Create files in: data/personal_data/")
-        print("2. Add documents like: about_me.txt, resume.pdf, etc.")
-        print("3. Run this script again")
-
-        return
-
-    # Show updated stats after loading
-    print(f"\nUpdated status: {rag.get_knowledge_stats()}")
 
     # Test questions
     test_questions = [
@@ -343,7 +335,7 @@ def test_rag_system():
     print("=" * 50)
 
     for i, question in enumerate(test_questions, 1):
-        print(f"\nQuestion {i}: {question}")
+        print(BLUE + ITALIC + f"\nQuestion {i}: {question}" + RESET)
         print("-" * 30)
 
         # Generate answer (search happens inside answer_about_me)
@@ -353,22 +345,22 @@ def test_rag_system():
         # Option to pause or exit
         if i < len(test_questions):
             user_input = input(
-                f"\nPress Enter to continue, 'q' to quit, or 's' to skip to interactive mode: ").strip().lower()
-            if user_input == 'q':
-                print("Test stopped.")
+                f"\nPress Enter to continue, or 's' to skip to interactive mode, or (type any of {", ".join(EXIT_CODES)} to exit) ").strip().lower()
+            if user_input in EXIT_CODES:
+                print(RED + "\nTest stopped.\n" + RESET)
                 return
             elif user_input == 's':
                 interactive_rag_test(rag)
                 return
 
-    print(f"\nTest completed! Final stats: {rag.get_knowledge_stats()}")
+    print(GREEN + f"\nTest completed! Final stats: {rag.get_knowledge_stats()}" + RESET)
 
 
-def interactive_rag_test(rag=None):
+def interactive_rag_test(rag):
     """Interactive test where you can ask your own questions"""
 
-    print("\nInteractive RAG Test - Ask Your Own Questions")
-    print("=" * 50)
+    print(MAGENTA + "\nInteractive RAG Test - Ask Your Own Questions" + RESET)
+    print("-" * 50)
 
     if rag is None:
         rag = PersonalRAG()
@@ -377,14 +369,15 @@ def interactive_rag_test(rag=None):
             print("No documents loaded. Add files to data/personal_data/ first.")
             return
 
-    print(f"\n{rag.get_knowledge_stats()}")
-    print(f"\nAsk questions about your background (type 'quit' to exit):")
+    print(YELLOW + f"\nAsk questions about your background (type any of {", ".join(EXIT_CODES)} to exit):" + RESET)
 
     while True:
-        question = input(f"\nYour question: ").strip()
+        print("\nYour question: " + YELLOW)
+        question = input().strip()
+        print(RESET)
 
-        if question.lower() in ['quit', 'exit', 'q']:
-            print("Goodbye!")
+        if question.lower() in EXIT_CODES:
+            print(GREEN + "\nGoodbye!\n" + RESET)
             break
 
         if not question:
@@ -396,19 +389,68 @@ def interactive_rag_test(rag=None):
 
 
 if __name__ == "__main__":
-    print("Choose test mode:")
-    print("1. Comprehensive test (predefined questions)")
-    print("2. Interactive test (ask your own questions)")
+    # ANSI escape color codes (foreground)
+    BLACK = '\033[30m'
+    RED = '\033[31m'
+    GREEN = '\033[32m'
+    YELLOW = '\033[33m'
+    BLUE = '\033[34m'
+    MAGENTA = '\033[35m'
+    CYAN = '\033[36m'
+    WHITE = '\033[37m'
 
-    choice = input("\nEnter 1 or 2: ").strip()
+    # Text styles
+    RESET = '\033[0m'  # Reset / Normal
+    BOLD = '\033[1m'
+    DIM = '\033[2m'
+    UNDERLINE = '\033[4m'
+    BLINK = '\033[5m'
+    REVERSE = '\033[7m'
+    HIDDEN = '\033[8m'
+    ITALIC = '\033[3m'
+
+    EXIT_CODES= ["q", "e", "!", "exit", "quit"]
+
+
+    # instantiate personal rag
+    rag = PersonalRAG()
+
+    # Show initial stats
+    print(BLINK + ITALIC + f"\nInitial status\n{rag.get_knowledge_stats()}" + RESET)
+
+    # Only load documents if knowledge base is empty (shouldn't normally have to enter this if-loop)
+    # documents are loaded in __init__
+    if rag.collection.count() == 0:
+        print(f"\nEmpty knowledge base detected. Auto-loading documents...")
+        loaded = rag.load_personal_documents()
+
+        if not loaded:
+            print("\nTo get started:")
+            print("1. Create files in: data/personal_data/")
+            print("2. Add documents like: about_me.txt, resume.pdf, etc.")
+            print("3. Run this script again")
+
+            print(GREEN + "Goodbye!" + RESET)
+            sys.exit(0)
+
+
+    print("\n" + "="*20 + "\n" + BLUE + "\nChoose test mode:" + YELLOW)
+    print("1. Comprehensive test (predefined questions)")
+    print("2. Interactive test (ask your own questions)" + RESET)
+
+
+    choice = input(f"\nPress either {", ".join(EXIT_CODES)} to exit\n\nEnter 1 or 2: ").strip()
 
     if choice == "1":
-        test_rag_system()
+        print(1)
+        test_rag_system(rag)
     elif choice == "2":
-        interactive_rag_test()
+        print(2)
+        interactive_rag_test(rag)
+
+    elif choice.lower() in EXIT_CODES:
+        print(GREEN + "\nExiting Main. Have a nice day!\n" + RESET)
+        sys.exit(0)
     else:
         print("Invalid choice, running comprehensive test...")
-        test_rag_system()
-
-if __name__ == "__main__":
-    test_rag_system()
+        test_rag_system(rag)
