@@ -122,7 +122,9 @@ cython_debug/
 
 # PyCharm
 .idea/
+
 notes**/*
+data/personal_data
 
 # Visual Studio Code
 .vscode/
