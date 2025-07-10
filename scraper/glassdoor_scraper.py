@@ -5,6 +5,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
+from datetime import datetime
 import pandas as pd
 from pathlib import Path
 import time
@@ -30,7 +31,7 @@ class GlassdoorScraper:
         self.wait = WebDriverWait(self.driver, 10)  # 10-second timeout
         print("✅ Driver started")
 
-    def scrape_jobs(self, query, location, max_jobs=20):
+    def scrape_jobs(self, query, location, max_jobs=20, include_full_description=False):
         """Scrape jobs from Glassdoor"""
         if not self.driver:
             self.start_driver()
@@ -56,7 +57,7 @@ class GlassdoorScraper:
 
         for i, job in enumerate(job_elements[:max_jobs]):
             try:
-                job_data = self._extract_job_data(job, i + 1)
+                job_data = self._extract_job_data(job, i + 1, include_full_description)
                 if job_data:
                     jobs_data.append(job_data)
 
@@ -65,7 +66,7 @@ class GlassdoorScraper:
 
         return jobs_data
 
-    def _extract_job_data(self, job_element, job_num):
+    def _extract_job_data(self, job_element, job_num, include_full_description=False):
         """Extract data from a single job element"""
         try:
             # Job title
@@ -88,23 +89,36 @@ class GlassdoorScraper:
             except:
                 salary = "Not specified"
 
-            # Job description snippet and skills
+            # Description and Skills snippet
+            snippet = ""
+            skills = ""
+
             try:
                 desc_elem = job_element.find_element(By.CSS_SELECTOR, "div[data-test='descSnippet']")
-                full_desc = self._clean_text(desc_elem.text)
 
-                # Extract skills
-                skills = self._extract_skills(desc_elem)
+                # Get snippet text
+                try:
+                    snippet = self._clean_text(desc_elem.text)
+                except:
+                    snippet = "Snippet extraction failed"
 
-                # Clean description
-                if "Skills:" in full_desc:
-                    description = full_desc.split("Skills:")[0].strip()[:200] + "..."
-                else:
-                    description = full_desc[:200] + "..."
+                # Extract skills from the same element
+                try:
+                    skills = self._extract_skills(desc_elem)
+                except:
+                    skills = "Skills extraction failed"
 
             except:
-                description = "No description available"
-                skills = "Not specified"
+                # If we can't find the snippet element at all
+                snippet = "No snippet element found"
+                skills = "No snippet element found"
+
+            # Full description (if requested)
+            if include_full_description:
+                print(f"Getting full description for job {job_num}")
+                full_description = self._get_full_description(job_url)
+            else:
+                full_description = snippet
 
             job_data = {
                 'title': title,
@@ -112,13 +126,14 @@ class GlassdoorScraper:
                 'location': location,
                 'salary': salary,
                 'skills': skills,
-                'description': description,
-                'url': job_url
+                'description_snippet': full_description,
+                'url': job_url,
+                'full_description': full_description,
             }
 
             print(f"✅ Extracted job {job_num}: {title} at {company}")
             if skills != "Not specified":
-                print(f"   🛠️  Skills: {skills}")
+                print(f"  🛠️ Skills: {skills}")
 
             return job_data
 
@@ -155,6 +170,36 @@ class GlassdoorScraper:
         except Exception as e:
             return "Not specified"
 
+    def _get_full_description(self, job_url):
+        """Navigate to job page and get full description"""
+        try:
+            # Open in new tab
+            self.driver.execute_script(f"window.open('{job_url}', '_blank');")
+            self.driver.switch_to.window(self.driver.window_handles[-1])
+
+            time.sleep(2)
+
+            # Get full description
+            try:
+                desc_elem = self.driver.find_element(By.CSS_SELECTOR, "div.JobDetails_jobDescription__uW_fK")
+                full_description = self._clean_text(desc_elem.text)
+            except:
+                full_description = "No description available"
+
+            # Close tab and return to main window
+            self.driver.close()
+            self.driver.switch_to.window(self.driver.window_handles[0])
+
+            return full_description
+
+        except Exception as e:
+            print(f"❌ Error getting full description: {e}")
+            if len(self.driver.window_handles) > 1:
+                self.driver.close()
+                self.driver.switch_to.window(self.driver.window_handles[0])
+            return "No description available"
+
+
     def _clean_text(self, text):
         """Clean and normalize extracted text"""
         if not text:
@@ -186,9 +231,14 @@ class GlassdoorScraper:
         data_dir.mkdir(exist_ok=True)
         print(f"📁 Using data directory: {data_dir}")
 
+        # Add today's date to filename
+        today = datetime.now().strftime("%d-%m-%Y")
+        name_without_ext = filename.rsplit('.', 1)[0]  # Remove .csv extension
+        dated_filename = f"{name_without_ext}_{today}.csv"
+
         # Save to CSV
         df = pd.DataFrame(jobs_data)
-        filepath = data_dir / filename
+        filepath = data_dir / dated_filename
         df.to_csv(filepath, index=False)
         print(f"✅ Saved {len(jobs_data)} jobs to {filepath}")
 
@@ -200,24 +250,41 @@ class GlassdoorScraper:
 
 
 
+
+
 if __name__ == "__main__":
     scraper = GlassdoorScraper()
 
     try:
+        print("Starting JobFlow scraper")
+
         jobs = scraper.scrape_jobs(
             query="data science intern",
-            location="canada",
-            max_jobs=10
+            location="ottawa",
+            max_jobs=30,
+            include_full_description=True
         )
 
-        for job in jobs:
-            print(f"\nTitle:\t\t {job['title']}")
-            print(f"Company:\t {job['company']}")
-            print(f"Location:\t {job['location']}")
-            print(f"Salary:\t\t {job['salary']}")
+        if jobs:
+            print(f"\nSuccessfully scraped {len(jobs)} jobs!")
 
-        # Save to CSV
-        scraper.save_to_csv(jobs, "glassdoor_jobs.csv")
+            # Preview first 5job
+            for job in jobs[:5]:
+                print(f"\nTitle:\t\t {job['title']}")
+                print(f"Company:\t {job['company']}")
+                print(f"Location:\t {job['location']}")
+                print(f"Salary:\t\t {job['salary']}")
 
+            # Save to CSV with today's date
+            scraper.save_to_csv(jobs, "glassdoor_jobs.csv")
+
+        else:
+            print("❌ No jobs found")
+
+    except KeyboardInterrupt:
+        print("\n⏹️ Scraping interrupted by user")
+    except Exception as e:
+        print(f"❌ Error during scraping: {e}")
     finally:
         scraper.close()
+        print("Browser closed")
