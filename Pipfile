@@ -12,6 +12,7 @@ webdriver-manager = "*"
 pandas = "*"
 numpy = "*"
 pathlib = "*"
+langchain-groq = "*"
 
 [dev-packages]
 
