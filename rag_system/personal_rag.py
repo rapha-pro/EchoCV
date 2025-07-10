@@ -26,7 +26,7 @@ class PersonalRAG:
 
         # Set up ChromaDB
         self.chroma_client = chromadb.PersistentClient(
-            path=str(persist_dir)
+            path=str(cache_dir)
         )
 
         # Create or get collection
@@ -54,6 +54,9 @@ class PersonalRAG:
             separators=["\n\n", "\n", ". ", " "]
         )
 
+        # Load prompt template from file
+        self.answer_prompt_template = self._load_prompt_template("answer_about_me.txt")
+
         # Only auto-load if completely empty
         if self.collection.count() == 0:
             print("\nEmpty knowledge base detected, auto-loading documents...")
@@ -62,7 +65,7 @@ class PersonalRAG:
             print(f"\nLoaded existing knowledge base: {self.collection.count()} chunks\n")
 
         print(ITALIC + BLINK + f"Personal RAG system initialized. "\
-                               f"ChromaDB persistence directory: {persist_dir}\n" + RESET)
+                               f"ChromaDB persistence directory: {cache_dir}\n" + RESET)
 
 
     def get_knowledge_stats(self):
@@ -83,7 +86,7 @@ class PersonalRAG:
             sources.add(metadata.get('source', 'unknown'))
             doc_types.add(metadata.get('doc_type', 'unknown'))
 
-        stats = f"""\nKnowledge Base Stats:\n+ Total chunks:{count}\n+ Sources:\n{', '.join(sources)}\n+ Document types: {', '.join(doc_types)}"""
+        stats = f"""\nKnowledge Base Stats:\n+ Total chunks: {count}\n+ Sources:\n {', '.join(sources)}\n+ Document types: {', '.join(doc_types)}"""
 
         return stats
 
@@ -122,23 +125,50 @@ class PersonalRAG:
         # Combine relevant chunks
         relevant_info = "\n\n".join(search_results['documents'][0])
 
+        # Format the prompt using the loaded template
+        prompt = self.answer_prompt_template.format(
+            context=relevant_info,
+            question=question
+        )
+
         # Generate response
-        prompt = f"""
-        Based on the following information about me, answer this question: {question}
-
-        My background information:
-        {relevant_info}
-
-        Please provide a personalized, student-professional response that directly answers the question using specific 
-        details from my background. Keep it concise but compelling. 
-        DON'Ts
-        - DO NOT USE ai-detectable words like: innovation, spearheaded, cutting-edge, prospect, particularly drawn... ai-words similar to these in your answer
-        "- DO NOT USE EM-DASHES-NEVER
-        """
-
         response = self.llm.invoke([HumanMessage(content=prompt)])
 
         return response.content
+
+
+    def _load_prompt(self, filename):
+        prompt_file = Path(__file__).parent / "prompts" / filename
+        with open(prompt_file, 'r') as f:
+            return f.read()
+
+
+    def _load_prompt_template(self, filename):
+        """Load the answer prompt template from file"""
+
+        try:
+            prompt_file = Path(__file__).parent / "prompts" / filename
+
+            template = self._load_prompt(filename)
+
+            print(f"Loaded prompt template: {prompt_file.name}\n")
+            return template
+
+        except Exception as e:
+            print(f"❌ Error loading prompt template \"{filename}\": {e}")
+            print("Using fallback prompt")
+
+            # Fallback prompt if file doesn't exist
+            return """
+            Based on the following information about me, answer this question: {question}
+
+            My background information:
+            {context}
+
+            Please provide a personalized response using first person perspective.
+
+            Answer:
+            """
 
 
     def load_personal_documents(self):
@@ -169,6 +199,7 @@ class PersonalRAG:
             return False
 
         print(f"📚 Found {len(doc_files)} documents:")
+
 
         # Load each document
         for doc_file in doc_files:
@@ -285,7 +316,7 @@ class PersonalRAG:
                     }]
                 )
 
-            print(f"Added {Path(source_name).name} to knowledge base")
+            print("Added " + ITALIC + "\"" + Path(source_name).name + "\"" + RESET +" to knowledge base")
 
         except Exception as e:
             print(f"❌ Error processing content: {e}")
@@ -319,7 +350,7 @@ def test_rag_system(rag):
     """Comprehensive test of the Personal RAG system"""
 
     print(MAGENTA + "Comprehensive Test" + RESET)
-    print("=" * 40)
+    print("=" * 25)
 
     # Test questions
     test_questions = [
@@ -332,7 +363,6 @@ def test_rag_system(rag):
     ]
 
     print(f"\nTesting with {len(test_questions)} questions:")
-    print("=" * 50)
 
     for i, question in enumerate(test_questions, 1):
         print(BLUE + ITALIC + f"\nQuestion {i}: {question}" + RESET)
@@ -345,7 +375,7 @@ def test_rag_system(rag):
         # Option to pause or exit
         if i < len(test_questions):
             user_input = input(
-                f"\nPress Enter to continue, or 's' to skip to interactive mode, or (type any of {", ".join(EXIT_CODES)} to exit) ").strip().lower()
+                f"\nPress Enter to continue, or 's' to skip to interactive mode, or (type any of {", ".join(EXIT_CODES)} to exit): ").strip().lower()
             if user_input in EXIT_CODES:
                 print(RED + "\nTest stopped.\n" + RESET)
                 return
@@ -369,7 +399,7 @@ def interactive_rag_test(rag):
             print("No documents loaded. Add files to data/personal_data/ first.")
             return
 
-    print(YELLOW + f"\nAsk questions about your background (type any of {", ".join(EXIT_CODES)} to exit):" + RESET)
+    print(YELLOW + f"\nAsk questions about your background (type any of {", ".join(EXIT_CODES)} to exit): " + RESET)
 
     while True:
         print("\nYour question: " + YELLOW)

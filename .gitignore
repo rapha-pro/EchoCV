@@ -126,6 +126,7 @@ cython_debug/
 notes**/*
 data/personal_data
 data/rag_knowledge_base_cache
+rag_system/prompts
 
 # Visual Studio Code
 .vscode/
