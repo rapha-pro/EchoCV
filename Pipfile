@@ -6,7 +6,12 @@ name = "pypi"
 [packages]
 requests = "*"
 beautifulsoup4 = "*"
+urllib3 = "*"
 selenium = "*"
+webdriver-manager = "*"
+pandas = "*"
+numpy = "*"
+pathlib = "*"
 
 [dev-packages]
 
