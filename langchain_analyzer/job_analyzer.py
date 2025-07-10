@@ -25,10 +25,17 @@ class JobAnalyzer:
 
         # Define the response schema
         self.response_schemas = [
+            ResponseSchema(name="title", description="Clean job title without dates, locations, or extra details"),
+            ResponseSchema(name="company",
+                           description="Standardized company name (e.g., 'Advanced Micro Devices' → 'AMD')"),
+            ResponseSchema(name="location", description="Standardized location format: City, Province/State, Country"),
+            ResponseSchema(name="salary", description="Clean salary range without extra text"),
+            ResponseSchema(name="duration", description="Duration if specified (e.g., '4 months', '8 months', 'not_specified')"),
+            ResponseSchema(name="start_season", description="Start season/time (e.g., 'Fall 2025', 'Summer 2024', 'not_specified')"),
+            ResponseSchema(name="work_arrangement", description="Work arrangement (remote/hybrid/onsite/not_specified)"),
             ResponseSchema(name="technical_skills", description="List of technical skills required", type="list"),
             ResponseSchema(name="experience_level", description="Required experience level: entry/internship/junior/mid/senior"),
             ResponseSchema(name="job_type", description="Type of position: internship/co-op/full-time/contract"),
-            ResponseSchema(name="remote_option", description="Work arrangement: remote/hybrid/onsite/not_specified"),
             ResponseSchema(name="education_requirements", description="Specific degree or education requirements"),
             ResponseSchema(name="key_responsibilities", description="Main job responsibilities", type="list"),
             ResponseSchema(name="company_culture_indicators", description="Indicators of company culture", type="list"),
@@ -60,7 +67,9 @@ class JobAnalyzer:
             SALARY: {salary}
             DESCRIPTION: {description}
 
-            Focus on extracting concrete information. If something isn't mentioned, use "not_specified".
+            Focus on extracting concrete information. If something isn't mentioned, look up the company online, and answer
+            to your best knowledge. If you still don't figure it out after searching, use "not_specified".
+            Return output only in a clean JSON format
 
             {format_instructions}
             """,
@@ -79,27 +88,14 @@ class JobAnalyzer:
         """Analyze a single job using the chain"""
 
         try:
-            title = job_data['title']
-            company = job_data['company']
-            location = job_data['location']
-            salary = job_data['salary']
-            description = job_data.get('description')
-
             # Run the analysis chain
             result = self.analysis_chain.run(
-                title=title,
-                company=company,
-                location=location,
-                salary=salary,
-                description=description
+                title=job_data['title'],
+                company = job_data['company'],
+                location = job_data['location'],
+                salary = job_data['salary'],
+                description = job_data.get('description')
             )
-
-            # Add job info to result (flat structure)
-            result['job_title'] = job_data['title']
-            result['company'] = job_data['company']
-            result['job_location'] = job_data['location']
-            result['salary'] = job_data['salary']
-            result['job_url'] = job_data['url']
 
             return result
 
@@ -151,17 +147,13 @@ def test_single_job_analysis():
     # Test chain
     analyzer = JobAnalyzer()
     first_job = df.iloc[0].to_dict()
-    print(f"Printing first job from df\nTo dict:\n{json.dumps(first_job, indent=2, sort_keys=True)}")
+    print(f"Printing first job from df\nTo dict:\n{json.dumps(first_job, indent=4, sort_keys=True)}")
 
     print(f"\n🔗 Testing LangChain analysis...")
     analysis = analyzer.analyze_single_job(first_job)
 
     if analysis:
-        print(f"\n🎯 Chain Results:")
-        print(f"- Fit Score:\t {analysis['internship_fit_score']}/10")
-        print(f"- Job Type: \t {analysis['job_type']}")
-        print(f"- Skills:   \t {', '.join(analysis['technical_skills'])}")
-        print(f"- Reasoning:\t {analysis['reasons_for_score']}\n")
+        print(f"\n🎯 Chain Results: {json.dumps(analysis, indent=4, sort_keys=True)}")
 
 
 
