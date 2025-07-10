@@ -20,7 +20,7 @@ test_sites = [
 
 for i, url in enumerate(test_sites):
     try:
-        print(f"\n🧪 Testing site {i + 1}: {url}")
+        print(f"\nTesting site {i + 1}: {url}")
         driver.get(url)
         time.sleep(3)
 
@@ -48,6 +48,6 @@ for i, url in enumerate(test_sites):
             print("❌ Site has protection")
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
 
 driver.quit()
