@@ -1,22 +1,24 @@
 import os
 import sys
-from pathlib import Path
 from dotenv import load_dotenv
 import chromadb
 from chromadb.config import Settings
 from langchain_groq import ChatGroq
 from langchain.schema import HumanMessage
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 import PyPDF2
 from pathlib import Path
+from question_router import SmartQuestionRouter
 
 
 load_dotenv()
 
 
 class PersonalRAG:
-    def __init__(self):
+    def __init__(self, force_reload=False):
         """Initialize personal knowledge base"""
 
         # Set up ChromaDB with explicit persistence
@@ -54,18 +56,40 @@ class PersonalRAG:
             separators=["\n\n", "\n", ". ", " "]
         )
 
-        # Load prompt template from file
-        self.answer_prompt_template = self._load_prompt_template("answer_about_me.txt")
+        # Load all prompt templates into dictionary
+        self.prompts = self._load_all_prompt_templates()
 
-        # Only auto-load if completely empty
-        if self.collection.count() == 0:
-            print("\nEmpty knowledge base detected, auto-loading documents...")
-            self.load_personal_documents()
-        else:
+        # Instantiate the question router
+        self.question_router = SmartQuestionRouter()
+
+        # Only autoload if completely empty or forced to do so
+        if self.collection.count() != 0 and not force_reload:
             print(f"\nLoaded existing knowledge base: {self.collection.count()} chunks\n")
+        else:
+            if force_reload:
+                print("🔄 Force reload requested - clearing existing data..")
+                self._clear_collection()
+            else:
+                print("\nEmpty knowledge base detected, auto-loading documents...")
+
+            self.load_personal_documents()
+
 
         print(ITALIC + BLINK + f"Personal RAG system initialized. "\
                                f"ChromaDB persistence directory: {cache_dir}\n" + RESET)
+
+
+    def _clear_collection(self):
+        """Clear all data from the collection"""
+        try:
+            # Get all IDs and delete them
+            all_data = self.collection.get()
+            if all_data['ids']:
+                self.collection.delete(ids=all_data['ids'])
+                print("Cleared existing collection data")
+        except Exception as e:
+            print(f"❌ Error clearing collection: {e}")
+
 
 
     def get_knowledge_stats(self):
@@ -90,6 +114,43 @@ class PersonalRAG:
 
         return stats
 
+
+    def _add_document_content(self, content, source_name, doc_type, description=""):
+        """Add document content directly (instead of reading from file)"""
+
+        try:
+            print(f"Processing content from: {Path(source_name).name}")
+
+            # Split into chunks
+            chunks = self.text_splitter.split_text(content)
+            print(f"   Split into {len(chunks)} chunks")
+
+            # Create embeddings and store
+            for i, chunk in enumerate(chunks):
+                chunk_id = f"{Path(source_name).stem}_chunk_{i}"
+
+                # Generate embedding
+                embedding = self.embeddings.embed_query(chunk)
+
+                # Add to ChromaDB
+                self.collection.add(
+                    ids=[chunk_id],
+                    embeddings=[embedding],
+                    documents=[chunk],
+                    metadatas=[{
+                        "source": Path(source_name).name,
+                        "doc_type": doc_type,
+                        "description": description,
+                        "chunk_index": i
+                    }]
+                )
+
+            print("Added " + ITALIC + "\"" + Path(source_name).name + "\"" + RESET +" to knowledge base")
+
+        except Exception as e:
+            print(f"❌ Error processing content: {e}")
+
+
     def search_knowledge(self, query, n_results=5):
         """Search personal knowledge base"""
 
@@ -111,10 +172,34 @@ class PersonalRAG:
             return None
 
 
+    def answer_question(self, question):
+        """Main entry point - classifies and routes questions"""
+
+        print(f"🔍 Analyzing question: {question}")
+
+        # Step 1: Classify the question
+        classification = self.question_router.classify_question(question)
+
+        question_type = classification.get("question_type", "general")
+        confidence = classification.get("confidence", "medium")
+        reasoning = classification.get("reasoning", "")
+
+        print(f"Classification: {question_type} (confidence: {confidence})")
+        print(f"Reasoning: {reasoning}\n")
+
+        # Step 2: Route to appropriate handler
+        if question_type == "personal":
+            print("🔍 Searching personal knowledge base...")
+            return self.answer_about_me(question)
+        else:
+            print("🌐 Using general knowledge...")
+            return self.answer_general_knowledge(question)
+
+
     def answer_about_me(self, question):
         """Generate personalized answer using RAG"""
 
-        print(f"🔍 Searching knowledge for: {question}")
+        print(f"Searching knowledge for: {question}\n")
 
         # Search relevant information
         search_results = self.search_knowledge(question)
@@ -126,7 +211,7 @@ class PersonalRAG:
         relevant_info = "\n\n".join(search_results['documents'][0])
 
         # Format the prompt using the loaded template
-        prompt = self.answer_prompt_template.format(
+        prompt = self.prompts['personal'].format(
             context=relevant_info,
             question=question
         )
@@ -137,29 +222,74 @@ class PersonalRAG:
         return response.content
 
 
-    def _load_prompt(self, filename):
-        prompt_file = Path(__file__).parent / "prompts" / filename
-        with open(prompt_file, 'r') as f:
-            return f.read()
+    def answer_general_knowledge(self, question):
+        """Handle general knowledge questions with external prompt"""
+
+        # Create general knowledge chain with external prompt
+        general_prompt = PromptTemplate(
+            input_variables=["question"],
+            template=self.prompts['general']
+        )
+
+        general_chain = LLMChain(
+            llm=self.llm,
+            prompt=general_prompt
+        )
+
+        try:
+            result = general_chain.invoke({"question": question})
+            return result['text']
+        except Exception as e:
+            return f"Sorry, I encountered an error while processing your question: {e}"
+
+
+    def _load_all_prompt_templates(self):
+        """Load all prompt templates from files into a dictionary"""
+
+        prompt_files = {
+            "personal": "answer_about_me.txt",
+            "general": "general_knowledge.txt",
+            "classification": "classification_prompt.txt"
+        }
+
+        prompts = {}
+
+        print("Loading prompt templates")
+
+        for name, filename in prompt_files.items():
+            template = self._load_prompt_template(filename)
+            prompts[name] = template
+            print(f"  Loaded: {name}")
+
+        print(f"Loaded {len(prompts)} prompt templates\n")
+        return prompts
 
 
     def _load_prompt_template(self, filename):
-        """Load the answer prompt template from file"""
+        """Load a prompt template from file"""
 
         try:
             prompt_file = Path(__file__).parent / "prompts" / filename
 
-            template = self._load_prompt(filename)
+            with open(prompt_file, 'r') as f:
+                template = f.read()
 
             print(f"Loaded prompt template: {prompt_file.name}\n")
             return template
 
-        except Exception as e:
-            print(f"❌ Error loading prompt template \"{filename}\": {e}")
-            print("Using fallback prompt")
 
-            # Fallback prompt if file doesn't exist
-            return """
+        except Exception as e:
+
+            print(f"❌ Error loading prompt template {filename}: {e}")
+
+            return self._get_fallback_prompt(filename)
+
+
+    def _get_fallback_prompt(self, filename):
+        """Provide fallback prompts if files are missing"""
+
+        fallbacks = {
+            "answer_about_me.txt": """
             Based on the following information about me, answer this question: {question}
 
             My background information:
@@ -168,7 +298,24 @@ class PersonalRAG:
             Please provide a personalized response using first person perspective.
 
             Answer:
+            """,
+            "general_knowledge.txt": """
+            Answer this question clearly and professionally:
+
+            Question: {question}
+
+            Provide accurate, helpful information.
+            """,
+            "classification_prompt.txt": """
+            Classify this question as 'personal' or 'general':
+
+            Question: {question}
+
+            {format_instructions}
             """
+        }
+
+        return fallbacks.get(filename, "Answer this question: {question}")
 
 
     def load_personal_documents(self):
@@ -286,42 +433,6 @@ class PersonalRAG:
             return f.read()
 
 
-    def _add_document_content(self, content, source_name, doc_type, description=""):
-        """Add document content directly (instead of reading from file)"""
-
-        try:
-            print(f"Processing content from: {Path(source_name).name}")
-
-            # Split into chunks
-            chunks = self.text_splitter.split_text(content)
-            print(f"   Split into {len(chunks)} chunks")
-
-            # Create embeddings and store
-            for i, chunk in enumerate(chunks):
-                chunk_id = f"{Path(source_name).stem}_chunk_{i}"
-
-                # Generate embedding
-                embedding = self.embeddings.embed_query(chunk)
-
-                # Add to ChromaDB
-                self.collection.add(
-                    ids=[chunk_id],
-                    embeddings=[embedding],
-                    documents=[chunk],
-                    metadatas=[{
-                        "source": Path(source_name).name,
-                        "doc_type": doc_type,
-                        "description": description,
-                        "chunk_index": i
-                    }]
-                )
-
-            print("Added " + ITALIC + "\"" + Path(source_name).name + "\"" + RESET +" to knowledge base")
-
-        except Exception as e:
-            print(f"❌ Error processing content: {e}")
-
-
     def _infer_doc_type(self, filename):
         """Guess document type from filename"""
 
@@ -369,7 +480,7 @@ def test_rag_system(rag):
         print("-" * 30)
 
         # Generate answer (search happens inside answer_about_me)
-        answer = rag.answer_about_me(question)
+        answer = rag.answer_question(question)
         print(f"Answer: {answer}")
 
         # Option to pause or exit
@@ -407,14 +518,14 @@ def interactive_rag_test(rag):
         print(RESET)
 
         if question.lower() in EXIT_CODES:
-            print(GREEN + "\nGoodbye!\n" + RESET)
+            print(GREEN + "Goodbye!\n" + RESET)
             break
 
         if not question:
             continue
 
         print(f"\nSearching...")
-        answer = rag.answer_about_me(question)
+        answer = rag.answer_question(question)
         print(f"Answer: {answer}")
 
 
