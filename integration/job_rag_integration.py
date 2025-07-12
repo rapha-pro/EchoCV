@@ -128,9 +128,9 @@ class JobRAGIntegration:
         confidence = classification.get("confidence", "medium")
         reasoning = classification.get("reasoning", "")
 
-        print(f"- Classification: {question_type} (confidence: {confidence})")
+        print(f"> Classification: {question_type} (confidence: {confidence})")
         if reasoning:
-            print(f"   Reasoning: {reasoning}")
+            print(f"    Reasoning: {reasoning}")
 
         # Get relevant personal background for this question
         personal_background = self.personal_rag.search_knowledge(question, n_results=6)
@@ -291,8 +291,9 @@ class JobRAGIntegration:
 def test_complete_integration():
     """Test the complete integration system with enhanced presentation"""
 
+    num_of_seperation_chars = 70
     print(header("Complete Job-RAG Integration System Test"))
-    print("=" * 70)
+    print("=" * num_of_seperation_chars)
 
     # Initialize system
     print("Initializing system...")
@@ -337,17 +338,19 @@ def test_complete_integration():
     print(f"\n{warning('Instructions:')}")
     print("- Press Enter to continue")
     print("- Type 'a' for batch mode")
-    print(f"- Type {error('/'.join(EXIT_CODES[:3]))} to exit")
+    print(f"- Type any of {error(', '.join(EXIT_CODES))} to exit")
 
     # Test questions
     for i, q in enumerate(test_questions, 1):
-        print(f"\n" + "=" * 70)
+        print(f"\n" + "=" * num_of_seperation_chars)
         print(question(f"Question {i}: {q}"))
-        print("-" * 70)
+        print("-" * num_of_seperation_chars)
 
         try:
             response = integration.answer_job_question(q, sample_job)
-            print(f"{Colors.WHITE}Response:{Colors.RESET}\n{response}")
+            print("-"*num_of_seperation_chars + "\n")
+            print(f"{Colors.YELLOW}Response:{Colors.RESET}\n")
+            print(response + "\n")
 
         except Exception as e:
             print(error(f"Error: {e}"))
