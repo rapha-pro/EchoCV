@@ -59,12 +59,6 @@ class PersonalRAG:
             separators=["\n\n", "\n", ". ", " "]
         )
 
-        # Load all prompt templates into dictionary
-        self.prompts = self._load_all_prompt_templates()
-
-        # Instantiate the question router
-        self.question_router = SmartQuestionRouter()
-
         # Only autoload if completely empty or forced to do so
         if self.collection.count() != 0 and not force_reload:
             print(f"\nLoaded existing knowledge base: {self.collection.count()} chunks\n")
@@ -78,8 +72,8 @@ class PersonalRAG:
             self.load_personal_documents()
 
 
-        print(ITALIC + BLINK + f"Personal RAG system initialized. "\
-                               f"ChromaDB persistence directory: {cache_dir}\n" + RESET)
+        print(f"Personal RAG system initialized. "\
+              f"ChromaDB persistence directory: {cache_dir}\n")
 
 
     def _clear_collection(self):
@@ -148,7 +142,7 @@ class PersonalRAG:
                     }]
                 )
 
-            print("Added " + ITALIC + "\"" + Path(source_name).name + "\"" + RESET +" to knowledge base")
+            print("Added " + "\"" + Path(source_name).name + "\"" +" to knowledge base")
 
         except Exception as e:
             print(f"❌ Error processing content: {e}")
@@ -173,152 +167,6 @@ class PersonalRAG:
         except Exception as e:
             print(f"❌ Search error: {e}")
             return None
-
-
-    def answer_question(self, question):
-        """Main entry point - classifies and routes questions"""
-
-        print(f"🔍 Analyzing question: {question}")
-
-        # Step 1: Classify the question
-        classification = self.question_router.classify_question(question)
-
-        question_type = classification.get("question_type", "general")
-        confidence = classification.get("confidence", "medium")
-        reasoning = classification.get("reasoning", "")
-
-        print(f"Classification: {question_type} (confidence: {confidence})")
-        print(f"Reasoning: {reasoning}\n")
-
-        # Step 2: Route to appropriate handler
-        if question_type == "personal":
-            print("🔍 Searching personal knowledge base...")
-            return self.answer_about_me(question)
-        else:
-            print("🌐 Using general knowledge...")
-            return self.answer_general_knowledge(question)
-
-
-    def answer_about_me(self, question):
-        """Generate personalized answer using RAG"""
-
-        print(f"Searching knowledge for: {question}\n")
-
-        # Search relevant information
-        search_results = self.search_knowledge(question)
-
-        if not search_results or not search_results['documents'][0]:
-            return "I don't have enough information to answer that question."
-
-        # Combine relevant chunks
-        relevant_info = "\n\n".join(search_results['documents'][0])
-
-        # Format the prompt using the loaded template
-        prompt = self.prompts['personal'].format(
-            context=relevant_info,
-            question=question
-        )
-
-        # Generate response
-        response = self.llm.invoke([HumanMessage(content=prompt)])
-
-        return response.content
-
-
-    def answer_general_knowledge(self, question):
-        """Handle general knowledge questions with external prompt"""
-
-        # Create general knowledge chain with external prompt
-        general_prompt = PromptTemplate(
-            input_variables=["question"],
-            template=self.prompts['general']
-        )
-
-        general_chain = LLMChain(
-            llm=self.llm,
-            prompt=general_prompt
-        )
-
-        try:
-            result = general_chain.invoke({"question": question})
-            return result['text']
-        except Exception as e:
-            return f"Sorry, I encountered an error while processing your question: {e}"
-
-
-    def _load_all_prompt_templates(self):
-        """Load all prompt templates from files into a dictionary"""
-
-        prompt_files = {
-            "personal": "answer_about_me.txt",
-            "general": "general_knowledge.txt",
-            "classification": "classification_prompt.txt"
-        }
-
-        prompts = {}
-
-        print("Loading prompt templates")
-
-        for name, filename in prompt_files.items():
-            template = self._load_prompt_template(filename)
-            prompts[name] = template
-            print(f"  Loaded: {name}")
-
-        print(f"Loaded {len(prompts)} prompt templates\n")
-        return prompts
-
-
-    def _load_prompt_template(self, filename):
-        """Load a prompt template from file"""
-
-        try:
-            prompt_file = Path(__file__).parent / "prompts" / filename
-
-            with open(prompt_file, 'r') as f:
-                template = f.read()
-
-            print(f"Loaded prompt template: {prompt_file.name}\n")
-            return template
-
-
-        except Exception as e:
-
-            print(f"❌ Error loading prompt template {filename}: {e}")
-
-            return self._get_fallback_prompt(filename)
-
-
-    def _get_fallback_prompt(self, filename):
-        """Provide fallback prompts if files are missing"""
-
-        fallbacks = {
-            "answer_about_me.txt": """
-            Based on the following information about me, answer this question: {question}
-
-            My background information:
-            {context}
-
-            Please provide a personalized response using first person perspective.
-
-            Answer:
-            """,
-            "general_knowledge.txt": """
-            Answer this question clearly and professionally:
-
-            Question: {question}
-
-            Provide accurate, helpful information.
-            """,
-            "classification_prompt.txt": """
-            Classify this question as 'personal' or 'general':
-
-            Question: {question}
-
-            {format_instructions}
-            """
-        }
-
-        return fallbacks.get(filename, "Answer this question: {question}")
 
 
     def load_personal_documents(self):
@@ -457,146 +305,3 @@ class PersonalRAG:
             return 'transcript'
         else:
             return 'general'
-
-
-
-def test_rag_system(rag):
-    """Comprehensive test of the Personal RAG system"""
-
-    print(MAGENTA + "Comprehensive Test" + RESET)
-    print("=" * 25)
-
-    # Test questions
-    test_questions = [
-        "Tell me about yourself",
-        "What programming languages do you know?",
-        "What projects have you worked on?",
-        "What's your educational background?",
-        "Why are you interested in data science?",
-        "Why do you want to work at Google?"
-    ]
-
-    print(f"\nTesting with {len(test_questions)} questions:")
-
-    for i, question in enumerate(test_questions, 1):
-        print(BLUE + ITALIC + f"\nQuestion {i}: {question}" + RESET)
-        print("-" * 30)
-
-        # Generate answer (search happens inside answer_about_me)
-        answer = rag.answer_question(question)
-        print(f"Answer: {answer}")
-
-        # Option to pause or exit
-        if i < len(test_questions):
-            user_input = input(
-                f"\nPress Enter to continue, or 's' to skip to interactive mode, or (type any of {", ".join(EXIT_CODES)} to exit): ").strip().lower()
-            if user_input in EXIT_CODES:
-                print(RED + "\nTest stopped.\n" + RESET)
-                return
-            elif user_input == 's':
-                interactive_rag_test(rag)
-                return
-
-    print(GREEN + f"\nTest completed! Final stats: {rag.get_knowledge_stats()}" + RESET)
-
-
-def interactive_rag_test(rag):
-    """Interactive test where you can ask your own questions"""
-
-    print(MAGENTA + "\nInteractive RAG Test - Ask Your Own Questions" + RESET)
-    print("-" * 50)
-
-    if rag is None:
-        rag = PersonalRAG()
-        loaded = rag.load_personal_documents()
-        if not loaded:
-            print("No documents loaded. Add files to data/personal_data/ first.")
-            return
-
-    print(YELLOW + f"\nAsk questions about your background (type any of {", ".join(EXIT_CODES)} to exit): " + RESET)
-
-    while True:
-        print("\nYour question: " + YELLOW)
-        question = input().strip()
-        print(RESET)
-
-        if question.lower() in EXIT_CODES:
-            print(GREEN + "Goodbye!\n" + RESET)
-            break
-
-        if not question:
-            continue
-
-        print(f"\nSearching...")
-        answer = rag.answer_question(question)
-        print(f"Answer: {answer}")
-
-
-
-
-# ANSI escape color codes (foreground)
-BLACK = '\033[30m'
-RED = '\033[31m'
-GREEN = '\033[32m'
-YELLOW = '\033[33m'
-BLUE = '\033[34m'
-MAGENTA = '\033[35m'
-CYAN = '\033[36m'
-WHITE = '\033[37m'
-
-# Text styles
-RESET = '\033[0m'  # Reset / Normal
-BOLD = '\033[1m'
-DIM = '\033[2m'
-UNDERLINE = '\033[4m'
-BLINK = '\033[5m'
-REVERSE = '\033[7m'
-HIDDEN = '\033[8m'
-ITALIC = '\033[3m'
-
-EXIT_CODES= ["q", "e", "!", "exit", "quit"]
-
-
-if __name__ == "__main__":
-    # instantiate personal rag
-    rag = PersonalRAG()
-
-    # Show initial stats
-    print(BLINK + ITALIC + f"\nInitial status\n{rag.get_knowledge_stats()}" + RESET)
-
-    # Only load documents if knowledge base is empty (shouldn't normally have to enter this if-loop)
-    # documents are loaded in __init__
-    if rag.collection.count() == 0:
-        print(f"\nEmpty knowledge base detected. Auto-loading documents...")
-        loaded = rag.load_personal_documents()
-
-        if not loaded:
-            print("\nTo get started:")
-            print("1. Create files in: data/personal_data/")
-            print("2. Add documents like: about_me.txt, resume.pdf, etc.")
-            print("3. Run this script again")
-
-            print(GREEN + "Goodbye!" + RESET)
-            sys.exit(0)
-
-
-    print("\n" + "="*20 + "\n" + BLUE + "\nChoose test mode:" + YELLOW)
-    print("1. Comprehensive test (predefined questions)")
-    print("2. Interactive test (ask your own questions)" + RESET)
-
-
-    choice = input(f"\nPress either {", ".join(EXIT_CODES)} to exit\n\nEnter 1 or 2: ").strip()
-
-    if choice == "1":
-        print(1)
-        test_rag_system(rag)
-    elif choice == "2":
-        print(2)
-        interactive_rag_test(rag)
-
-    elif choice.lower() in EXIT_CODES:
-        print(GREEN + "\nExiting Main. Have a nice day!\n" + RESET)
-        sys.exit(0)
-    else:
-        print("Invalid choice, running comprehensive test...")
-        test_rag_system(rag)

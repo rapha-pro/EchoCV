@@ -153,7 +153,7 @@ def test_single_job_analysis():
     analysis = analyzer.analyze_single_job(first_job)
 
     if analysis:
-        print(f"\n🎯 Chain Results: {json.dumps(analysis, indent=4, sort_keys=True)}")
+        print(f"\n> Chain Results: {json.dumps(analysis, indent=4, sort_keys=True)}")
 
 
 
