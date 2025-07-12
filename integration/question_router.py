@@ -4,38 +4,39 @@ from langchain_groq import ChatGroq
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
-from langchain.schema import HumanMessage
 from pathlib import Path
+
 
 load_dotenv()
 
-class SmartQuestionRouter:
+
+class QuestionRouter:
+    """Lightweight router for classifying job application questions"""
+
     def __init__(self):
         self.llm = ChatGroq(
             api_key=os.getenv("GROQ_API_KEY"),
             model="llama-3.1-8b-instant",
-            temperature=0.1  # Low temperature for consistent classification
+            temperature=0.1
         )
 
-        # Load prompt template from file
-        self.classification_prompt_template = self._load_prompt_template("classification_prompt.txt")
+        # Load classification prompt
+        self.classification_prompt = self._load_classification_prompt()
 
-        # Set up classification chain
+        # Create classification chain
         self.classification_chain = self._create_classification_chain()
 
-        print("Smart Question Router initialized")
+        print("Question Router initialized")
 
-
-    def _load_prompt_template(self, filename):
-        """Load the classification prompt template from file"""
+    def _load_classification_prompt(self):
+        """Load classification prompt from file"""
 
         try:
-            prompt_file = Path(__file__).parent / "prompts" / filename
+            prompt_file = Path(__file__).parent.parent / "prompts" / "job_question_classification.txt"
 
             with open(prompt_file, 'r', encoding='utf-8') as f:
                 template = f.read()
 
-            print(f"Loaded classification prompt: {prompt_file.name}")
             return template
 
         except Exception as e:
@@ -46,21 +47,24 @@ class SmartQuestionRouter:
     def _get_fallback_prompt(self):
         """Fallback prompt if file loading fails"""
         return """
-        Classify this question as either asking about a person's background/experience (personal) or asking for general knowledge (general).
+        Classify this job application question:
 
         Question: {question}
+
+        Categories: why_work_here, experience_match, cover_letter, flexible
 
         {format_instructions}
         """
 
+
     def _create_classification_chain(self):
-        """Create chain to classify questions"""
+        """Create chain to classify job application questions"""
 
         # Define classification schema
         classification_schema = [
             ResponseSchema(
                 name="question_type",
-                description="Type of question: 'personal' or 'general'"
+                description="Type of question: 'why_work_here', 'experience_match', 'cover_letter', or 'flexible'"
             ),
             ResponseSchema(
                 name="confidence",
@@ -76,7 +80,7 @@ class SmartQuestionRouter:
 
         prompt_template = PromptTemplate(
             input_variables=["question"],
-            template=self.classification_prompt_template,
+            template=self.classification_prompt,
             partial_variables={"format_instructions": output_parser.get_format_instructions()}
         )
 
@@ -88,7 +92,7 @@ class SmartQuestionRouter:
 
 
     def classify_question(self, question):
-        """Classify the question type"""
+        """Classify question using LLM chain"""
 
         try:
             result = self.classification_chain.invoke({"question": question})
@@ -99,15 +103,31 @@ class SmartQuestionRouter:
 
 
     def _fallback_classification(self, question):
-        """Simple keyword-based fallback classification"""
+        """Simple keyword-based fallback if LLM classification fails"""
 
-        personal_keywords = ["you", "your", "my", "i", "me", "tell me about yourself"]
         question_lower = question.lower()
 
-        is_personal = any(keyword in question_lower for keyword in personal_keywords)
-
-        return {
-            "question_type": "personal" if is_personal else "general",
-            "confidence": "low",
-            "reasoning": "Fallback classification using keywords"
-        }
+        if any(phrase in question_lower for phrase in ["why do you want", "why work", "why join", "why apply"]):
+            return {
+                "question_type": "why_work_here",
+                "confidence": "medium",
+                "reasoning": "Keyword-based fallback classification"
+            }
+        elif any(phrase in question_lower for phrase in ["experience relate", "qualification", "how does your"]):
+            return {
+                "question_type": "experience_match",
+                "confidence": "medium",
+                "reasoning": "Keyword-based fallback classification"
+            }
+        elif "cover letter" in question_lower:
+            return {
+                "question_type": "cover_letter",
+                "confidence": "high",
+                "reasoning": "Keyword-based fallback classification"
+            }
+        else:
+            return {
+                "question_type": "flexible",
+                "confidence": "low",
+                "reasoning": "Keyword-based fallback classification"
+            }

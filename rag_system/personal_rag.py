@@ -1,10 +1,6 @@
 import os
 import sys
 from pathlib import Path
-# Add parent directories to path for imports (question_router)
-sys.path.append(str(Path(__file__).parent))
-
-from dotenv import load_dotenv
 import chromadb
 from chromadb.config import Settings
 from langchain_groq import ChatGroq
@@ -14,7 +10,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 import PyPDF2
-from question_router import SmartQuestionRouter
+from dotenv import load_dotenv
 
 
 load_dotenv()

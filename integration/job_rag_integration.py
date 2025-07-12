@@ -10,6 +10,7 @@ from rag_system.personal_rag import PersonalRAG
 from langchain_groq import ChatGroq
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
+from question_router import QuestionRouter
 from dotenv import load_dotenv
 from utility.text_styles import Colors, EXIT_CODES, success, error, warning, info, highlight, question, header, dim
 
@@ -26,6 +27,7 @@ class JobRAGIntegration:
         # Initialize core components
         self.job_analyzer = JobAnalyzer()
         self.personal_rag = PersonalRAG()
+        self.question_router = QuestionRouter()
 
         self.llm = ChatGroq(
             api_key=os.getenv("GROQ_API_KEY"),
@@ -119,6 +121,17 @@ class JobRAGIntegration:
 
         print(f"> Generating personalized response for: {question}")
 
+        # Classify the question using the router
+        classification = self.question_router.classify_question(question)
+
+        question_type = classification.get("question_type", "flexible")
+        confidence = classification.get("confidence", "medium")
+        reasoning = classification.get("reasoning", "")
+
+        print(f"- Classification: {question_type} (confidence: {confidence})")
+        if reasoning:
+            print(f"   Reasoning: {reasoning}")
+
         # Get relevant personal background for this question
         personal_background = self.personal_rag.search_knowledge(question, n_results=6)
         background_text = "\n".join(personal_background['documents'][0]) if personal_background['documents'][
@@ -126,9 +139,6 @@ class JobRAGIntegration:
 
         print(f"> Found relevant background: {len(background_text)} characters")
 
-        # Check if it's a special question type that needs specialized handling
-        question_type = self._classify_job_question(question)
-        print(f"> Question classified as: {question_type}")
 
         if question_type in ["why_work_here", "experience_match", "cover_letter"]:
             # Use specialized template for common questions that need specific job context
@@ -291,6 +301,8 @@ class JobRAGIntegration:
             print(f"Generated response ({len(response)} characters)")
 
         return responses
+
+
 
 
 def test_complete_integration():

@@ -1,0 +1,28 @@
+Classify this job application question into one of these specific categories:
+
+Question: {question}
+
+Classification Categories:
+
+1. "why_work_here" - Questions about motivation for joining the company:
+   - "Why do you want to work at [company]?"
+   - "Why are you interested in this company?"
+   - "What attracts you to [company]?"
+
+2. "experience_match" - Questions about relevant experience:
+   - "How does your experience relate to this role?"
+   - "What relevant experience do you have?"
+   - "Describe your qualifications for this position"
+
+3. "cover_letter" - Requests for cover letter or application letter:
+   - "Write a cover letter"
+   - "Generate an application letter"
+   - "Draft a letter of interest"
+
+4. "flexible" - All other application questions:
+   - "What's your greatest strength?"
+   - "Describe a challenging project"
+   - "Where do you see yourself in 5 years?"
+   - Any other interview or application question
+
+{format_instructions}
