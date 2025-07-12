@@ -148,23 +148,6 @@ class JobRAGIntegration:
             return self._generate_flexible_response(question, job_data, background_text)
 
 
-    def _classify_job_question(self, question):
-        """Classify the type of job question for appropriate template selection"""
-
-        question_lower = question.lower()
-
-        if any(phrase in question_lower for phrase in
-               ["why do you want", "why work", "why join", "why apply", "why choose"]):
-            return "why_work_here"
-        elif any(phrase in question_lower for phrase in
-                 ["experience relate", "qualification", "how does your", "relevant experience"]):
-            return "experience_match"
-        elif any(phrase in question_lower for phrase in ["cover letter", "letter of interest"]):
-            return "cover_letter"
-        else:
-            return "flexible"
-
-
     def _generate_specialized_response(self, question_type, job_data, personal_background):
         """Handle specialized questions using dedicated templates"""
 
@@ -186,7 +169,7 @@ class JobRAGIntegration:
             template=self.prompts["why_work_here"]
         )
 
-        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        chain = prompt_template | self.llm
 
         try:
             result = chain.invoke({
@@ -197,7 +180,7 @@ class JobRAGIntegration:
                 "personal_background": personal_background
             })
 
-            return result['text']
+            return result.content
 
         except Exception as e:
             return f"Error generating 'why work here' response: {e}"
@@ -211,7 +194,7 @@ class JobRAGIntegration:
             template=self.prompts["experience_match"]
         )
 
-        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        chain = prompt_template | self.llm
 
         try:
             result = chain.invoke({
@@ -221,7 +204,7 @@ class JobRAGIntegration:
                 "personal_background": personal_background
             })
 
-            return result['text']
+            return result.content
 
         except Exception as e:
             return f"Error generating experience match response: {e}"
@@ -235,7 +218,7 @@ class JobRAGIntegration:
             template=self.prompts["cover_letter"]
         )
 
-        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        chain = prompt_template | self.llm
 
         try:
             result = chain.invoke({
@@ -246,7 +229,7 @@ class JobRAGIntegration:
                 "personal_background": personal_background
             })
 
-            return result['text']
+            return result.content
 
         except Exception as e:
             return f"Error generating cover letter: {e}"
@@ -262,7 +245,7 @@ class JobRAGIntegration:
             template=self.prompts["flexible"]
         )
 
-        chain = LLMChain(llm=self.llm, prompt=prompt_template)
+        chain = prompt_template | self.llm
 
         try:
             result = chain.invoke({
@@ -275,7 +258,7 @@ class JobRAGIntegration:
                 "personal_background": personal_background
             })
 
-            return result['text']
+            return result.content
 
         except Exception as e:
             return f"Error generating flexible response: {e}"

@@ -78,17 +78,17 @@ class QuestionRouter:
 
         output_parser = StructuredOutputParser.from_response_schemas(classification_schema)
 
-        prompt_template = PromptTemplate(
+        prompt = PromptTemplate(
             input_variables=["question"],
             template=self.classification_prompt,
-            partial_variables={"format_instructions": output_parser.get_format_instructions()}
+            partial_variables={
+                "format_instructions": output_parser.get_format_instructions()
+            }
         )
 
-        return LLMChain(
-            llm=self.llm,
-            prompt=prompt_template,
-            output_parser=output_parser
-        )
+        # Modern approach: prompt | llm | parser
+        chain = prompt | self.llm | output_parser
+        return chain
 
 
     def classify_question(self, question):
@@ -96,7 +96,7 @@ class QuestionRouter:
 
         try:
             result = self.classification_chain.invoke({"question": question})
-            return result['text']
+            return result
         except Exception as e:
             print(f"❌ Classification failed: {e}")
             return self._fallback_classification(question)
