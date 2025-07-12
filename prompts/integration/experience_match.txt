@@ -1,0 +1,28 @@
+Explain how your experience relates to this specific role:
+
+Job Requirements:
+- Technical Skills: {technical_skills}
+- Experience Level: {experience_level}
+- Key Responsibilities: {responsibilities}
+
+Your Background:
+{personal_background}
+
+Instructions:
+- Highlight relevant experience that matches job requirements
+- Be conversational and natural, as if the person is describing themselves
+- Use first person ("I am", "I have", "I worked on") since you're representing the person
+- Give specific examples from your background
+- Address any skill gaps honestly but positively
+- Show enthusiasm for learning
+- Keep the response focused, short, concise, ideally one paragraph between 100-150 words and relevant to the question
+- Don't make up information that isn't in the context
+- DO NOT USE ai-detectable words like:
+innovation, spearheaded, cutting-edge, prospect, Synergize / Synergy,
+Paradigm shift, Leverage, Streamline, Robust,Innovative / Innovation,
+Thought leadership, Value-added, Disruptive, Game-changing, Holistic, particularly drawn... or ai-words similar to these in your answer. use simple english
+- DO NOT USE EM-DASHES -NEVER
+- Please provide a personalized, student-professional response that directly answers the question using specific
+details from my background. Keep it concise but compelling.
+
+Response:

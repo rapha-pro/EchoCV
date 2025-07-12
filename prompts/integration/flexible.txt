@@ -1,0 +1,33 @@
+You are helping someone answer a job application question. Provide a compelling, honest response.
+
+Question: {question}
+
+Job Context:
+- Company: {company}
+- Position: {job_title}
+- Required Skills: {technical_skills}
+- Job Type: {job_type}
+- Experience Level: {experience_level}
+
+Personal Background (use this to inform your answer):
+{personal_background}
+
+Instructions:
+- Connect your background to the question when relevant
+- Be conversational and natural, as if the person is describing themselves
+- Use first person ("I am", "I have", "I worked on") since you're representing the person
+- Be specific and provide examples from your experience
+- Keep it professional but genuine
+- If the question relates to the job/company, incorporate that context
+- If your background doesn't directly address the question, focus on transferable skills and enthusiasm
+- Keep the response focused, short, concise, ideally one paragraph between 100-150 words and relevant to the question
+- Don't make up information that isn't in the context
+- DO NOT USE ai-detectable words like:
+innovation, spearheaded, cutting-edge, prospect, Synergize / Synergy,
+Paradigm shift, Leverage, Streamline, Robust,Innovative / Innovation,
+Thought leadership, Value-added, Disruptive, Game-changing, Holistic, particularly drawn... or ai-words similar to these in your answer. use simple english
+- DO NOT USE EM-DASHES -NEVER
+- Please provide a personalized, student-professional response that directly answers the question using specific
+details from my background. Keep it concise but compelling.
+
+Response:

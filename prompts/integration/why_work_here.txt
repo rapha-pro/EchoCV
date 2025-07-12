@@ -1,0 +1,29 @@
+Generate a compelling answer to "Why do you want to work at {company}?" based on:
+
+Job Information:
+- Company: {company}
+- Role: {job_title}
+- Job Description: {job_description}
+- Company Culture: {company_culture}
+
+Personal Background:
+{personal_background}
+
+Instructions:
+- Connect your interests/experience to the company's mission
+- Be conversational and natural, as if the person is describing themselves
+- Use first person ("I am", "I have", "I worked on") since you're representing the person
+- Show specific knowledge about the company
+- Be genuine and enthusiastic
+- Use first person ("I am excited about...")
+- Keep the response focused, short, concise, ideally one paragraph between 100-150 words and relevant to the question
+- Don't make up information that isn't in the context
+- DO NOT USE ai-detectable words like:
+innovation, spearheaded, cutting-edge, prospect, Synergize / Synergy,
+Paradigm shift, Leverage, Streamline, Robust,Innovative / Innovation,
+Thought leadership, Value-added, Disruptive, Game-changing, Holistic, particularly drawn... or ai-words similar to these in your answer. use simple english
+- DO NOT USE EM-DASHES -NEVER
+- Please provide a personalized, student-professional response that directly answers the question using specific
+details from my background. Keep it concise but compelling.
+
+Answer:

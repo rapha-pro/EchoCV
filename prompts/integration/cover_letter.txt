@@ -1,0 +1,31 @@
+Write a professional cover letter for this position:
+
+Job Details:
+- Company: {company}
+- Position: {job_title}
+- Key Requirements: {technical_skills}
+- Job Type: {job_type}
+
+Your Background:
+{personal_background}
+
+Instructions:
+- Be conversational and natural, as if the person is describing themselves
+- Use first person ("I am", "I have", "I worked on") since you're representing the person
+- Do not include my personal info: address, city, province, email, phone etc
+- Professional but personable tone
+- 2 paragraphs maximum
+- Connect your background to their needs
+- Show genuine interest in the role
+- End with call to action
+- Keep the response focused and relevant to the question
+- Don't make up information that isn't in the context
+- DO NOT USE ai-detectable words like:
+innovation, spearheaded, cutting-edge, prospect, Synergize / Synergy,
+Paradigm shift, Leverage, Streamline, Robust,Innovative / Innovation,
+Thought leadership, Value-added, Disruptive, Game-changing, Holistic, particularly drawn... or ai-words similar to these in your answer. use simple english
+- DO NOT USE EM-DASHES -NEVER
+- Please provide a personalized, student-professional response that directly answers the question using specific
+details from my background. Keep it concise but compelling.
+
+Cover Letter:

@@ -1,5 +1,9 @@
 import os
 import sys
+from pathlib import Path
+# Add parent directories to path for imports (question_router)
+sys.path.append(str(Path(__file__).parent))
+
 from dotenv import load_dotenv
 import chromadb
 from chromadb.config import Settings
@@ -10,7 +14,6 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
 import PyPDF2
-from pathlib import Path
 from question_router import SmartQuestionRouter
 
 
@@ -529,30 +532,32 @@ def interactive_rag_test(rag):
         print(f"Answer: {answer}")
 
 
+
+
+# ANSI escape color codes (foreground)
+BLACK = '\033[30m'
+RED = '\033[31m'
+GREEN = '\033[32m'
+YELLOW = '\033[33m'
+BLUE = '\033[34m'
+MAGENTA = '\033[35m'
+CYAN = '\033[36m'
+WHITE = '\033[37m'
+
+# Text styles
+RESET = '\033[0m'  # Reset / Normal
+BOLD = '\033[1m'
+DIM = '\033[2m'
+UNDERLINE = '\033[4m'
+BLINK = '\033[5m'
+REVERSE = '\033[7m'
+HIDDEN = '\033[8m'
+ITALIC = '\033[3m'
+
+EXIT_CODES= ["q", "e", "!", "exit", "quit"]
+
+
 if __name__ == "__main__":
-    # ANSI escape color codes (foreground)
-    BLACK = '\033[30m'
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    BLUE = '\033[34m'
-    MAGENTA = '\033[35m'
-    CYAN = '\033[36m'
-    WHITE = '\033[37m'
-
-    # Text styles
-    RESET = '\033[0m'  # Reset / Normal
-    BOLD = '\033[1m'
-    DIM = '\033[2m'
-    UNDERLINE = '\033[4m'
-    BLINK = '\033[5m'
-    REVERSE = '\033[7m'
-    HIDDEN = '\033[8m'
-    ITALIC = '\033[3m'
-
-    EXIT_CODES= ["q", "e", "!", "exit", "quit"]
-
-
     # instantiate personal rag
     rag = PersonalRAG()
 

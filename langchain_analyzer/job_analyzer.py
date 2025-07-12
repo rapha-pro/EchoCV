@@ -48,7 +48,7 @@ class JobAnalyzer:
         self.output_parser = StructuredOutputParser.from_response_schemas(self.response_schemas)
         self.analysis_chain = self._create_analysis_chain()
 
-        print("Job Analyzer initialized with LangChain structured output parser")
+        print("Job Analyzer initialized")
 
 
     def _create_analysis_chain(self):
