@@ -29,7 +29,7 @@ class GlassdoorScraper:
         """Start the Chrome driver"""
         self.driver = webdriver.Chrome(service=self.service, options=self.chrome_options)
         self.wait = WebDriverWait(self.driver, 10)  # 10-second timeout
-        print("✅ Driver started")
+        print("Driver started")
 
     def scrape_jobs(self, query, location, max_jobs=20, include_full_description=False):
         """Scrape jobs from Glassdoor"""
@@ -245,7 +245,7 @@ class GlassdoorScraper:
         """Close the browser"""
         if self.driver:
             self.driver.quit()
-            print("✅ Browser closed")
+            print("Browser closed")
 
 
 

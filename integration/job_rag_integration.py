@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 # Add parent directories to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.append(str(Path(__file__).parent))
 
 from langchain_analyzer.job_analyzer import JobAnalyzer
 from rag_system.personal_rag import PersonalRAG
