@@ -67,6 +67,17 @@ class JobApplicationAgent:
         print(success("Browser started successfully"))
 
 
+    async def close_browser(self):
+        """Clean up browser resources"""
+
+        if self.browser:
+            await self.browser.close()
+        if self.playwright:
+            await self.playwright.stop()
+
+        print(success("Browser closed"))
+
+
     async def apply_to_job(self, job_url, job_data):
         """Main method: Navigate to job and attempt to apply"""
 
@@ -116,43 +127,151 @@ class JobApplicationAgent:
 
 
     async def _navigate_to_job(self, job_url):
-        """Navigate to the job posting page"""
+        """Navigate to job page with multiple fallback strategies"""
 
-        print(info(f"Navigating to: {job_url}"))
+        print(info(f"\nNavigating to: {job_url}"))
 
-        # networkidle waits for all network request to finish
-        # ideal of modern websites. Waits for all content to load
-        await self.page.goto(job_url, wait_until='networkidle')
+        # try 1: Standard approach
+        try:
+            print(info("\ntry 1: Standard navigation"))
+            await self.page.goto(job_url, wait_until='domcontentloaded', timeout=10000)
+            await self._wait_for_page_stability()
+            print(success("> Standard navigation successful"))
+            return True
 
-        # extra time for dynamic content to load
-        await asyncio.sleep(2)
+        except Exception as e1:
+            print(warning(f"try 1 failed: {e1}"))
 
-        # Take screenshot using helper method
+        # retry 2: Faster loading
+        try:
+            print(info("retry 2: Fast loading"))
+            await self.page.goto(job_url, wait_until='load', timeout=10000)
+            await asyncio.sleep(3)
+            print(success("> Fast loading successful"))
+            return True
+
+        except Exception as e2:
+            print(warning(f"retry 2 failed: {e2}"))
+
+        # retry 3: Minimal wait
+        try:
+            print(info("retry 3: Minimal wait"))
+            await self.page.goto(job_url, wait_until='commit', timeout=8000)
+            await asyncio.sleep(3)  # Manual wait
+            print(success("> Minimal wait successful"))
+            return True
+
+        except Exception as e3:
+            print(error(f"All navigation strategies failed after 3 retries: {e3}"))
+            return False
+
+
+    async def _wait_for_page_stability(self):
+        """Wait for the page to become stable"""
+
+        print(info("Waiting for page stability"))
+
+        try:
+            await self.page.wait_for_load_state('networkidle', timeout=5000)
+            print(success("Page reached network idle"))
+        except:
+            print(info("Network idle timeout, using manual wait"))
+            await asyncio.sleep(2)
+
+        # take a screenshot for debugging
         await self._take_screenshot("job_page.png", "Job page loaded")
+        print(info("Screenshot saved for debugging"))
+
+
+    async def _find_and_click_apply(self):
+        """Find and click the apply button"""
+
+        print(info("Looking for apply button"))
+
+        # Take screenshot before searching
+        await self._take_screenshot("before_apply_search.png", "Before searching for apply button")
+
+        # Common apply button selectors
+        apply_selectors = [
+            'button:has-text("Apply")',
+            'a:has-text("Apply")',
+            'button:has-text("Apply Now")',
+            'a:has-text("Apply Now")',
+            '[data-test*="apply"]',
+            '.apply-button',
+            '#apply-button',
+            'button[class*="apply"]',
+            'a[class*="apply"]'
+        ]
+
+        for selector in apply_selectors:
+            try:
+                apply_button = self.page.locator(selector).first
+
+                if await apply_button.is_visible():
+                    print(success(f"Found apply button: {selector}"))
+                    await apply_button.click()
+                    await asyncio.sleep(2)  # to wait for form to load
+                    await self._take_screenshot("after_apply_click.png", "After clicking apply button")
+                    return True
+                else:
+                    print(warning(f"Element found but not visible: {selector}"))
+
+            except Exception as e:
+                continue
+
+        await self._take_screenshot("no_apply_button.png", "No apply button found")
+        print(error("No apply button found with any selector"))
+
+        return False
 
 
 
 # basic setup
-async def test_advanced_browser():
-    """Test the advanced browser setup"""
+async def test_apply_button_finder():
+    """Test the apply button finder on a real job site"""
+
     agent = JobApplicationAgent()
 
-    print("Testing advanced browser with anti-detection features...")
+    try:
+        # Start browser
+        await agent.start_browser(headless=False)
 
-    # Start browser
-    await agent.start_browser(headless=False)
+        # Navigate to a job site (you can replace with a real job URL)
+        test_url = input("Enter a job URL to test apply button finder (or press Enter to skip): ").strip()
 
-    # Navigate to a site that detects automation
-    print(info("Navigating to automation detection test site..."))
-    await agent.page.goto('https://bot.sannysoft.com/')
+        if not test_url:
+            print(info("Creating a test page with apply button..."))
+            # Create a simple test page
+            test_html = """
+            <html>
+            <body>
+                <h1>Test Job Posting</h1>
+                <button class="apply-button">Apply Now</button>
+                <a href="#" data-test="apply-link">Easy Apply</a>
+            </body>
+            </html>
+            """
+            await agent.page.set_content(test_html)
+        else:
+            await agent._navigate_to_job(test_url)
 
-    # Wait so we can see the results
-    print("Check the browser window - how many red warnings do you see?")
-    await asyncio.sleep(10)
+        # Test the apply button finder
+        print(f"\n{info('Testing apply button finder...')}")
+        found = await agent._find_and_click_apply()
 
-    # Close browser
-    await agent.close_browser()
+        if found:
+            print(success("Apply button test passed!"))
+        else:
+            print(error("Apply button test failed!"))
+
+        # Keep browser open to see results
+        print("Check the browser and screenshots. Browser will close in 10 seconds...")
+        await asyncio.sleep(10)
+
+    finally:
+        await agent.close_browser()
 
 
 if __name__ == "__main__":
-    asyncio.run(test_advanced_browser())
+    asyncio.run(test_apply_button_finder())

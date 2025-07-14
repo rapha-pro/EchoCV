@@ -123,6 +123,9 @@ cython_debug/
 # PyCharm
 .idea/
 
+# logs
+log**/
+
 notes**/*
 data/personal_data
 data/rag_knowledge_base_cache
