@@ -25,6 +25,8 @@ beautifulsoup4 = "*"
 browser-use = "*"
 langchain-hyperbrowser = "*"
 langgraph = "*"
+streamlit = "*"
+plotly = "*"
 
 [dev-packages]
 
