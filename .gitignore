@@ -133,3 +133,16 @@ rag_system/prompts
 
 # Visual Studio Code
 .vscode/
+
+        # Logs and generated content
+        logs/
+        *.log
+        
+        # personal data
+        data/
+        
+        # Browser automation
+        screenshots/
+        *.png
+        *.jpg
+        

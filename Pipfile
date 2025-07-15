@@ -22,6 +22,9 @@ langchain-huggingface = "*"
 playwright = "*"
 selenium-wire = "*"
 beautifulsoup4 = "*"
+browser-use = "*"
+langchain-hyperbrowser = "*"
+langgraph = "*"
 
 [dev-packages]
 

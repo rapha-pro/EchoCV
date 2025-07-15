@@ -1,277 +1,236 @@
-import os
-import sys
-from pathlib import Path
 import asyncio
-import time
-from playwright.async_api import async_playwright
 from dotenv import load_dotenv
+from browser_use import Agent
+from browser_use.llm import ChatGroq
+from datetime import datetime
+from pathlib import Path
+import sys
+import os
 
-# Add parent directories to path
 sys.path.append(str(Path(__file__).parent.parent))
-
 from integration.job_rag_integration import JobRAGIntegration
-from utility.text_styles import Colors, success, error, warning, info, question, header
+from automation.document_manager import DocumentManager
+from utility.text_styles import header, success, info, warning, error
+
 
 load_dotenv()
 
+async def main():
+    agent = Agent(
+        task="go to this website and extract all the input fields and print it out: https://boards.greenhouse.io/embed/job_app?token=6642169003&utm_source=Simplify&ref=Simplify",
+        llm=ChatGroq(model="meta-llama/llama-4-maverick-17b-128e-instruct")
+    )
+    await agent.run()
 
-import asyncio
-from playwright.async_api import async_playwright
-from pathlib import Path
+asyncio.run(main())
 
 
-class JobApplicationAgent:
+class PersonalInfo:
+    """Manages personal information from environment variables"""
+
     def __init__(self):
-        """Initialize intelligent job application agent"""
-        print("🤖 Initializing Job Application Agent")
+        # Basic personal info
+        self.first_name = os.getenv("PERSONAL_FIRST_NAME", "")
+        self.last_name = os.getenv("PERSONAL_LAST_NAME", "")
+        self.email = os.getenv("PERSONAL_EMAIL", "")
+        self.phone = os.getenv("PERSONAL_PHONE", "")
+        self.address = os.getenv("PERSONAL_ADDRESS", "")
+        self.linkedin = os.getenv("PERSONAL_LINKEDIN", "")
+        self.github = os.getenv("PERSONAL_GITHUB", "")
+        self.portfolio = os.getenv("PERSONAL_PORTFOLIO", "")
+        self.years_experience = os.getenv("PERSONAL_YEARS_EXPERIENCE", "")
+        self.current_title = os.getenv("PERSONAL_CURRENT_TITLE", "")
+        self.availability = os.getenv("PERSONAL_AVAILABILITY", "")
+        self.salary_expectation = os.getenv("PERSONAL_SALARY_EXPECTATION", "")
 
-        self.playwright = None
-        self.browser = None
-        self.context = None
-        self.page = None
+        # Education info
+        self.graduation_year = os.getenv("PERSONAL_GRADUATION_YEAR", "")
+        self.graduation_month = os.getenv("PERSONAL_GRADUATION_MONTH", "")
+        self.school_name = os.getenv("PERSONAL_SCHOOL_NAME", "")
+        self.degree = os.getenv("PERSONAL_DEGREE", "")
+        self.degree_program = os.getenv("PERSONAL_DEGREE_PROGRAM", "")
+        self.gpa = os.getenv("PERSONAL_GPA", "")
 
-        # Setup logs directory
-        self.logs_dir = Path(__file__).parent.parent / "logs" / "screenshots"
-        self.logs_dir.mkdir(parents=True, exist_ok=True)
+        # Resume file
+        self.resume_path = os.getenv("PERSONAL_RESUME_PATH", "data/personal_data/Tech_resume.pdf")
 
-        print("Job Application agent ready")
+        self.validate_info()
+
+    def validate_info(self):
+        """Validate that required personal info is provided"""
+
+        required_fields = {
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "email": self.email,
+            "phone": self.phone
+        }
+
+        missing_fields = [field for field, value in required_fields.items() if not value]
+
+        if missing_fields:
+            print(warning(f"Missing personal info in .env: {', '.join(missing_fields)}"))
+            print("Please update your .env file with personal information")
+        else:
+            print(success("✅ Personal information loaded from .env"))
+
+    def get_full_name(self):
+        """Get full name"""
+        return f"{self.first_name} {self.last_name}".strip()
+
+    def to_dict(self):
+        """Convert to dictionary for easy access"""
+        return {
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "full_name": self.get_full_name(),
+            "email": self.email,
+            "phone": self.phone,
+            "address": self.address,
+            "linkedin": self.linkedin,
+            "github": self.github,
+            "portfolio": self.portfolio,
+            "years_experience": self.years_experience,
+            "current_title": self.current_title,
+            "availability": self.availability,
+            "salary_expectation": self.salary_expectation,
+            "graduation_year": self.graduation_year,
+            "graduation_month": self.graduation_month,
+            "school_name": self.school_name,
+            "degree": self.degree,
+            "degree program": self.degree_program,
+            "gpa": self.gpa,
+            "resume_path": self.resume_path
+
+        }
 
 
-    async def start_browser(self, headless=False):
-        """Start the browser with optimal settings"""
 
-        print(info("Starting browser..."))
 
-        self.playwright = await async_playwright().start()
+class SimpleJobAgent:
+    """Simple job application agent - building step by step"""
 
-        # Launch browser with human-like settings
-        self.browser = await self.playwright.chromium.launch(
-            headless=headless,
-            args=[
-                '--no-first-run',    # skip chrome's first-time setup wizard to prevent pop-ups
-                '--disable-blink-features=AutomationControlled',   # removes the flag "Chrome is being controlled by automated software"
-                '--disable-web-security',   # disables CORS. allow to interact with forms across domains
-                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            ]
+    def __init__(self):
+        print(header("Initializing Simple Job Agent"))
+
+        # Load personal info and document manager
+        self.personal_info = PersonalInfo()
+        self.doc_manager = DocumentManager()
+
+        # Setup LLM with correct model
+        self.llm = ChatGroq(
+            model="meta-llama/llama-4-maverick-17b-128e-instruct"
         )
 
-        # Create context with human-like behavior
-        self.context = await self.browser.new_context(
-            viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        )
+        print(success("✅ Simple Job Agent Ready"))
 
-        # Create page
-        self.page = await self.context.new_page()
+    async def fill_basic_form(self, url):
+        """
+        Step 1: Navigate to URL, fill basic personal info fields, take screenshot
+        This is our first method - keeping it simple
+        """
 
-        print(success("Browser started successfully"))
+        print(f"\n{header('Step 1: Fill Basic Form')}")
+        print(f"🔗 URL: {url}")
+        print(f"👤 Applicant: {self.personal_info.get_full_name()}")
 
+        # Get personal info
+        personal_data = self.personal_info.to_dict()
 
-    async def close_browser(self):
-        """Clean up browser resources"""
+        # Create the task for browser_use
+        fill_task = f"""
+        Go to this website: {url}
 
-        if self.browser:
-            await self.browser.close()
-        if self.playwright:
-            await self.playwright.stop()
+        When the page loads:
+        1. Take a screenshot first (before filling anything)
 
-        print(success("Browser closed"))
+        2. Look for input fields and fill them with this personal information 
+            corresponding it's appropriate key from this dict:
+           {personal_data}
+           
+        3. Make sure to fill every input which matches any key above.
+           For the resume, upload/attach the resume from the resume path given
+           to you in the dict given above
 
+        4. Take another screenshot after filling the fields
 
-    async def apply_to_job(self, job_url, job_data):
-        """Main method: Navigate to job and attempt to apply"""
+        5. DO NOT submit the form or click any submit buttons
 
-        print(f"\n{header('Starting Job Application Process')}")
-        print(f"Job: {job_data.get('title', 'Unknown')} at {job_data.get('company', 'Unknown')}")
-        print(f"URL: {job_url}")
+        6. Report back what fields you found and filled
+
+        Important: fill the fields,  but do not submit anything.
+        """
 
         try:
-            await self._navigate_to_job(job_url)
+            print(info("🤖 Starting form filling..."))
 
-            apply_success = await self._find_and_click_apply()
+            # Create agent with the task
+            agent = Agent(
+                task=fill_task,
+                llm=self.llm
+            )
 
-            if not apply_success:
-                return {"success": False, "error": "Could not find apply button"}
+            # Run the agent
+            result = await agent.run()
 
-            # Fill out the application form
-            form_success = await self._fill_application_form(job_data)
+            print(success("✅ Form filling completed"))
+            print(f"Agent report: {result}")
 
-            if not form_success:
-                return {"success": False, "error": "Could not fill application form"}
-
-            # Review application (doesn't submit automatically)
-            await self._review_application()
-
-            return {"success": True, "message": "Application completed and ready for review"}
+            return {
+                "success": True,
+                "message": "Form filled with personal information",
+                "agent_report": result
+            }
 
         except Exception as e:
-            return {"success": False, "error": f"Application failed: {str(e)}"}
+            print(error(f"Form filling failed: {e}"))
+            return {
+                "success": False,
+                "error": str(e)
+            }
 
 
-    def _get_screenshot_path(self, filename):
-        """Get full path for screenshot file"""
-        return str(self.logs_dir / filename)
+async def test_basic_form_filling():
+    """Test the basic form filling functionality"""
 
+    print(header("Testing Basic Form Filling"))
 
-    async def _take_screenshot(self, filename, description=""):
-        """Take screenshot with consistent path and logging"""
-        screenshot_path = self._get_screenshot_path(filename)
-        await self.page.screenshot(path=screenshot_path)
+    # Test URL
+    test_url = "https://boards.greenhouse.io/embed/job_app?token=6642169003&utm_source=Simplify&ref=Simplify"
 
-        if description:
-            print(info(f"{description} - Screenshot saved: {filename}"))
+    # Create agent
+    agent = SimpleJobAgent()
+
+    # Test personal info loading
+    print(f"\nPersonal Info:")
+    personal_data = agent.personal_info.to_dict()
+    print(personal_data)
+
+    # Ask user if they want to proceed
+    # proceed = input(f"\n{info('Proceed with form filling test? (y/n): ')}").strip().lower()
+    proceed = 'y'
+
+    if proceed == 'y':
+        print(f"\n{header('Starting Form Fill Test')}")
+
+        # Run the form filling test
+        result = await agent.fill_basic_form(test_url)
+
+        print(f"\n{header('Test Results:')}")
+        print(f"Success: {result['success']}")
+
+        if result['success']:
+            print(f"✅ Message: {result['message']}")
+            print(f"📋 Details: {result['agent_report']}")
         else:
-            print(info(f"Screenshot saved: {filename}"))
+            print(f"❌ Error: {result['error']}")
 
-        return screenshot_path
+        print(f"\n{info('Check your browser window to see the filled form!')}")
+        print(f"{warning('The form was NOT submitted - review it manually')}")
 
-
-    async def _navigate_to_job(self, job_url):
-        """Navigate to job page with multiple fallback strategies"""
-
-        print(info(f"\nNavigating to: {job_url}"))
-
-        # try 1: Standard approach
-        try:
-            print(info("\ntry 1: Standard navigation"))
-            await self.page.goto(job_url, wait_until='domcontentloaded', timeout=10000)
-            await self._wait_for_page_stability()
-            print(success("> Standard navigation successful"))
-            return True
-
-        except Exception as e1:
-            print(warning(f"try 1 failed: {e1}"))
-
-        # retry 2: Faster loading
-        try:
-            print(info("retry 2: Fast loading"))
-            await self.page.goto(job_url, wait_until='load', timeout=10000)
-            await asyncio.sleep(3)
-            print(success("> Fast loading successful"))
-            return True
-
-        except Exception as e2:
-            print(warning(f"retry 2 failed: {e2}"))
-
-        # retry 3: Minimal wait
-        try:
-            print(info("retry 3: Minimal wait"))
-            await self.page.goto(job_url, wait_until='commit', timeout=8000)
-            await asyncio.sleep(3)  # Manual wait
-            print(success("> Minimal wait successful"))
-            return True
-
-        except Exception as e3:
-            print(error(f"All navigation strategies failed after 3 retries: {e3}"))
-            return False
-
-
-    async def _wait_for_page_stability(self):
-        """Wait for the page to become stable"""
-
-        print(info("Waiting for page stability"))
-
-        try:
-            await self.page.wait_for_load_state('networkidle', timeout=5000)
-            print(success("Page reached network idle"))
-        except:
-            print(info("Network idle timeout, using manual wait"))
-            await asyncio.sleep(2)
-
-        # take a screenshot for debugging
-        await self._take_screenshot("job_page.png", "Job page loaded")
-        print(info("Screenshot saved for debugging"))
-
-
-    async def _find_and_click_apply(self):
-        """Find and click the apply button"""
-
-        print(info("Looking for apply button"))
-
-        # Take screenshot before searching
-        await self._take_screenshot("before_apply_search.png", "Before searching for apply button")
-
-        # Common apply button selectors
-        apply_selectors = [
-            'button:has-text("Apply")',
-            'a:has-text("Apply")',
-            'button:has-text("Apply Now")',
-            'a:has-text("Apply Now")',
-            '[data-test*="apply"]',
-            '.apply-button',
-            '#apply-button',
-            'button[class*="apply"]',
-            'a[class*="apply"]'
-        ]
-
-        for selector in apply_selectors:
-            try:
-                apply_button = self.page.locator(selector).first
-
-                if await apply_button.is_visible():
-                    print(success(f"Found apply button: {selector}"))
-                    await apply_button.click()
-                    await asyncio.sleep(2)  # to wait for form to load
-                    await self._take_screenshot("after_apply_click.png", "After clicking apply button")
-                    return True
-                else:
-                    print(warning(f"Element found but not visible: {selector}"))
-
-            except Exception as e:
-                continue
-
-        await self._take_screenshot("no_apply_button.png", "No apply button found")
-        print(error("No apply button found with any selector"))
-
-        return False
-
-
-
-# basic setup
-async def test_apply_button_finder():
-    """Test the apply button finder on a real job site"""
-
-    agent = JobApplicationAgent()
-
-    try:
-        # Start browser
-        await agent.start_browser(headless=False)
-
-        # Navigate to a job site (you can replace with a real job URL)
-        test_url = input("Enter a job URL to test apply button finder (or press Enter to skip): ").strip()
-
-        if not test_url:
-            print(info("Creating a test page with apply button..."))
-            # Create a simple test page
-            test_html = """
-            <html>
-            <body>
-                <h1>Test Job Posting</h1>
-                <button class="apply-button">Apply Now</button>
-                <a href="#" data-test="apply-link">Easy Apply</a>
-            </body>
-            </html>
-            """
-            await agent.page.set_content(test_html)
-        else:
-            await agent._navigate_to_job(test_url)
-
-        # Test the apply button finder
-        print(f"\n{info('Testing apply button finder...')}")
-        found = await agent._find_and_click_apply()
-
-        if found:
-            print(success("Apply button test passed!"))
-        else:
-            print(error("Apply button test failed!"))
-
-        # Keep browser open to see results
-        print("Check the browser and screenshots. Browser will close in 10 seconds...")
-        await asyncio.sleep(10)
-
-    finally:
-        await agent.close_browser()
+    else:
+        print(info("Skipping form filling test"))
 
 
 if __name__ == "__main__":
-    asyncio.run(test_apply_button_finder())
+    asyncio.run(test_basic_form_filling())
