@@ -202,9 +202,9 @@ class PersonalAIApp:
 
         with col1:
             st.markdown("**🔗 Connect with Raphaël:**")
-            st.markdown("• [LinkedIn](https://linkedin.com/in/Raphaëldoe)")
-            st.markdown("• [GitHub](https://github.com/Raphaëldoe)")
-            st.markdown("• [Portfolio](https://Raphaëldoe.dev)")
+            st.markdown("• [LinkedIn](https://www.linkedin.com/in/raphaelonana/)")
+            st.markdown("• [GitHub](https://github.com/rapha-pro)")
+            st.markdown("• [Portfolio](https://nathonana.com/)")
 
         with col2:
             st.markdown("**💼 Interested in hiring Raphaël?**")
