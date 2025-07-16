@@ -12,7 +12,7 @@ from utility.text_styles import Colors
 
 # Configure page
 st.set_page_config(
-    page_title="Ask About Raphaël Doe",
+    page_title="Ask About Raphaël",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -28,7 +28,7 @@ class PersonalAIApp:
         """Initialize the Personal RAG system"""
 
         if 'rag_system' not in st.session_state:
-            with st.spinner("🧠 Loading AI knowledge about Raphaël..."):
+            with st.spinner("Loading AI knowledge about Raphaël..."):
                 try:
                     st.session_state.rag_system = PersonalRAG()
                     st.session_state.rag_loaded = True

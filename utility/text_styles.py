@@ -1,9 +1,3 @@
-"""
-Text styling utilities for terminal output
-Provides ANSI color codes and text formatting
-"""
-
-
 class Colors:
     """ANSI color codes for terminal text styling"""
 
