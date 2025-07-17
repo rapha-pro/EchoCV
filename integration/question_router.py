@@ -32,7 +32,7 @@ class QuestionRouter:
         """Load classification prompt from file"""
 
         try:
-            prompt_file = Path(__file__).parent.parent / "prompts" / "job_question_classification.txt"
+            prompt_file = Path(__file__).parent.parent / "prompts" / "integration" / "job_question_classification.txt"
 
             with open(prompt_file, 'r', encoding='utf-8') as f:
                 template = f.read()
