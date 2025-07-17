@@ -1,18 +1,16 @@
-# JobFlow
-An intelligent job application agent that automates job discovery, analysis, and application using modern AI technologies.
+# EchoCV
+EchoCV allows visitors or interviewers to ask natural language questions about my skills, projects, and experiences, making resume exploration and interview prep more dynamic and accessible
 
 ## Features (In Development)
-- [ ] Multi-platform job scraping (Indeed, LinkedIn, Glassdoor)
-- [ ] AI-powered job relevance analysis
+- [ ] AI-powered question analysis
 - [ ] Personal knowledge base with RAG
-- [ ] Automated application form filling
 - [ ] Personalized response generation
 
 ## Tech Stack
 - **LangChain** - AI agent orchestration
 - **RAG** - Personal knowledge retrieval
-- **Selenium** - Web automation
 - **ChromaDB** - Vector database
+- **Selenium** - Web automation
 - **BeautifulSoup** - HTML parsing
 
 ## 🚧 Current Status
