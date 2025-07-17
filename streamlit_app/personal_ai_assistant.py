@@ -175,12 +175,10 @@ class PersonalAIApp:
             🎓 **Education & Learning**
             - Degree and certifications
             - Courses and training
-            - Academic projects
 
             💼 **Projects & Experience**
             - Personal projects
             - Work experience
-            - Achievement highlights
 
             🎯 **Goals & Interests**
             - Career objectives
