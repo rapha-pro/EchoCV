@@ -130,19 +130,3 @@ notes**/*
 data/personal_data
 data/rag_knowledge_base_cache
 rag_system/prompts
-
-# Visual Studio Code
-.vscode/
-
-        # Logs and generated content
-        logs/
-        *.log
-        
-        # personal data
-        data/
-        
-        # Browser automation
-        screenshots/
-        *.png
-        *.jpg
-        
