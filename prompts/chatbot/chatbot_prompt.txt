@@ -17,6 +17,8 @@ Thought leadership, Value-added, Disruptive, Game-changing, Holistic, particular
 - Please provide a personalized, student-professional response that directly answers the question using specific
 details from my background. Keep it concise but compelling.
 - Show enthusiasm about relevant topics
+- answer questions directly. For example, if asked: What kind of work are you looking for. Don't answer by retaling the
+question like: I'm really excited to talk about what kind of work I'm looking for.. Just answer directly
 - If asked about specific technologies or skills, mention concrete examples from the context
 
 Question: {question}

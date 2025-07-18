@@ -30,7 +30,7 @@ class FileManager:
         self.data_dir = self.project_root / "data"
         self.prompts_dir = self.project_root / "prompts"
 
-        print(f"📁 FileManager initialized - Project root: {self.project_root}")
+        print(f"FileManager initialized - Project root: {self.project_root}")
 
 
     def load_prompt(self, prompt_name: str, prompts_subdir: str = "") -> str:
@@ -316,6 +316,7 @@ class FileManager:
         #     return False, f"File too large: {size_mb:.1f}MB (max 50MB)"
         #
         return True, "File is valid for text extraction"
+
 
 
 def test_file_manager():

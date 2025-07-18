@@ -38,7 +38,6 @@ class PersonalRAG:
             model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
 
-        # Set up LLM
         self.llm = ChatGroq(
             api_key=os.getenv("GROQ_API_KEY"),
             model="llama-3.1-8b-instant",
@@ -111,6 +110,7 @@ class PersonalRAG:
             "knowledge_loaded": True
         }
 
+
     def _add_document_content(self, content, source_name, doc_type, description=""):
         """Add document content using FileManager"""
 
@@ -178,6 +178,7 @@ class PersonalRAG:
         except Exception as e:
             print(f"❌ Search error: {e}")
             return []
+
 
     def load_personal_documents(self):
         """Load all documents using FileManager"""
