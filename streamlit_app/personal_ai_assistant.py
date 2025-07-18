@@ -1,7 +1,6 @@
 import streamlit as st
 import sys
 from pathlib import Path
-import time
 from datetime import datetime
 
 # Add parent directory to path
@@ -51,17 +50,15 @@ class PersonalAIApp:
         """Render the app header"""
 
         st.title(f"🤖 Ask About {NAME}")
+        st.markdown(f"I'm an AI assistant that knows all about {NAME}'s background, skills, and experience.")
         st.markdown("---")
 
         col1, col2, col3 = st.columns([2, 1, 1])
 
         with col1:
             st.markdown(f"""
-            **I'm an AI assistant that knows all about {NAME}'s background, skills, and experience.**
-
             Ask me anything about:
-            • Programming skills & technologies
-            • Project experience & achievements  
+            • experience & achievements
             • Education & certifications
             • Career goals & interests
             • Technical expertise
