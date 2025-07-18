@@ -1,8 +1,6 @@
 import streamlit as st
 import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
-from collections import Counter
 import sys
 from pathlib import Path
 
