@@ -2,33 +2,30 @@ import os
 import sys
 from pathlib import Path
 import chromadb
-from chromadb.config import Settings
 from langchain_groq import ChatGroq
-from langchain.schema import HumanMessage
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
 from langchain_huggingface import HuggingFaceEmbeddings
-import PyPDF2
 from dotenv import load_dotenv
 
+# Import FileManager
+sys.path.append(str(Path(__file__).parent.parent))
+from utility.file_manager import FileManager
 
 load_dotenv()
 
 
 class PersonalRAG:
     def __init__(self, force_reload=False):
-        """Initialize personal knowledge base"""
+        """Initialize personal knowledge base with FileManager"""
+
+        self.file_manager = FileManager()
 
         # Set up ChromaDB with explicit persistence
-        project_root = Path(__file__).parent.parent
-        cache_dir = project_root / "data" / "rag_knowledge_base_cache"
-        cache_dir.mkdir(exist_ok=True)
+        cache_dir = self.file_manager.data_dir / "rag_knowledge_base_cache"
+        self.file_manager.ensure_directory(cache_dir)
 
         # Set up ChromaDB
-        self.chroma_client = chromadb.PersistentClient(
-            path=str(cache_dir)
-        )
+        self.chroma_client = chromadb.PersistentClient(path=str(cache_dir))
 
         # Create or get collection
         self.collection = self.chroma_client.get_or_create_collection(
@@ -60,17 +57,15 @@ class PersonalRAG:
             print(f"\nLoaded existing knowledge base: {self.collection.count()} chunks\n")
         else:
             if force_reload:
-                print("🔄 Force reload requested - clearing existing data..")
+                print("Force reload requested - clearing existing data..")
                 self._clear_collection()
             else:
                 print("\nEmpty knowledge base detected, auto-loading documents...")
 
             self.load_personal_documents()
 
-
         print(f"Personal RAG system initialized. "\
               f"ChromaDB persistence directory: {cache_dir}\n")
-
 
     def _clear_collection(self):
         """Clear all data from the collection"""
@@ -84,14 +79,19 @@ class PersonalRAG:
             print(f"❌ Error clearing collection: {e}")
 
 
-
     def get_knowledge_stats(self):
-        """Show stats about personal knowledge base"""
+        """Get comprehensive stats about personal knowledge base"""
 
         count = self.collection.count()
 
         if count == 0:
-            return "Knowledge base is empty"
+            return {
+                "total_documents": 0,
+                "total_chunks": 0,
+                "sources": [],
+                "doc_types": [],
+                "knowledge_loaded": False
+            }
 
         # Get sample of documents to show sources
         sample = self.collection.get(include=["metadatas"])
@@ -103,13 +103,16 @@ class PersonalRAG:
             sources.add(metadata.get('source', 'unknown'))
             doc_types.add(metadata.get('doc_type', 'unknown'))
 
-        stats = f"""\nKnowledge Base Stats:\n+ Total chunks: {count}\n+ Sources:\n {', '.join(sources)}\n+ Document types: {', '.join(doc_types)}"""
-
-        return stats
-
+        return {
+            "total_documents": len(sources),
+            "total_chunks": count,
+            "sources": list(sources),
+            "doc_types": list(doc_types),
+            "knowledge_loaded": True
+        }
 
     def _add_document_content(self, content, source_name, doc_type, description=""):
-        """Add document content directly (instead of reading from file)"""
+        """Add document content using FileManager"""
 
         try:
             print(f"Processing content from: {Path(source_name).name}")
@@ -138,14 +141,14 @@ class PersonalRAG:
                     }]
                 )
 
-            print("Added " + "\"" + Path(source_name).name + "\"" +" to knowledge base")
+            print("Added " + "\"" + Path(source_name).name + "\"" + " to knowledge base")
 
         except Exception as e:
             print(f"❌ Error processing content: {e}")
 
 
-    def search_knowledge(self, query, n_results=5):
-        """Search personal knowledge base"""
+    def search_documents(self, query, top_k=5):
+        """Search personal knowledge base and return formatted results"""
 
         try:
             # Generate query embedding
@@ -154,32 +157,35 @@ class PersonalRAG:
             # Search similar chunks
             results = self.collection.query(
                 query_embeddings=[query_embedding],
-                n_results=n_results,
+                n_results=top_k,
                 include=["documents", "metadatas", "distances"]
             )
 
-            return results
+            # Format results for easier use
+            formatted_results = []
+
+            if results['documents'] and results['documents'][0]:
+                for i, doc in enumerate(results['documents'][0]):
+                    formatted_results.append({
+                        'content': doc,
+                        'source': results['metadatas'][0][i].get('source', 'Unknown'),
+                        'doc_type': results['metadatas'][0][i].get('doc_type', 'general'),
+                        'distance': results['distances'][0][i] if results['distances'] else 0.0
+                    })
+
+            return formatted_results
 
         except Exception as e:
             print(f"❌ Search error: {e}")
-            return None
-
+            return []
 
     def load_personal_documents(self):
-        """Automatically load all documents from personal_data folder"""
+        """Load all documents using FileManager"""
 
-        # Create personal_data directory if it doesn't exist
-        personal_data_dir = Path(__file__).parent.parent / "data" / "personal_data"
-        personal_data_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Looking for documents...")
 
-        print(f"📁 Looking for documents in: {personal_data_dir}")
-
-        # Find all supported file types
-        supported_extensions = ['*.txt', '*.md', '*.pdf', '*.docx']
-        doc_files = []
-
-        for extension in supported_extensions:
-            doc_files.extend(list(personal_data_dir.rglob(extension)))
+        # Use FileManager to find documents
+        doc_files = self.file_manager.find_documents()
 
         if not doc_files:
             print("No documents found in data/personal_data/")
@@ -189,115 +195,70 @@ class PersonalRAG:
             print("   - personal_statement.txt")
             print("   - skills.txt")
             print("   Supported formats: .txt, .md, .pdf, .docx")
-
             return False
 
-        print(f"📚 Found {len(doc_files)} documents:")
+        print(f"📚 Found {len(doc_files)} documents: {doc_files}")
 
-
-        # Load each document
+        # Load each document using FileManager
         for doc_file in doc_files:
             try:
-                # Extract text based on file type
-                content = self._extract_text(doc_file)
+                # Validate file
+                valid, message = self.file_manager.validate_file_for_extraction(doc_file)
 
-                if not content.strip():
-                    print(f"   ⚠️ {doc_file.name}: Empty or couldn't extract text")
+                if not valid:
+                    print(f"   ⚠️ {doc_file.name}: {message}")
                     continue
 
-                # Infer document type from filename
-                doc_type = self._infer_doc_type(doc_file.name)
+                # Extract text using FileManager
+                content = self.file_manager.extract_text(doc_file)
+
+                if not content.strip():
+                    print(f"   {doc_file.name}: Empty or couldn't extract text")
+                    continue
+
+                # Get document info and type using FileManager
+                file_info = self.file_manager.get_file_info(doc_file)
+                doc_type = file_info['document_type']
                 description = f"Personal {doc_type} information"
 
                 print(f"Loading: {doc_file.name} (type: {doc_type}, {len(content)} chars)")
 
-                # Use the extracted content instead of reading file directly
+                # Add to knowledge base
                 self._add_document_content(content, str(doc_file), doc_type, description)
 
             except Exception as e:
-                print(f"❌ Error loading {doc_file.name}: {e}")
+                print(f"❌ Error loadingO {doc_file.name}: {e}")
 
         return True
 
-    def _extract_text(self, file_path):
-        """Extract text from different file formats"""
 
-        file_path = Path(file_path)
-        extension = file_path.suffix.lower()
+def test_personal_rag():
+    """Test PersonalRAG with FileManager"""
 
-        try:
-            if extension == '.pdf':
-                return self._extract_pdf_text(file_path)
-            elif extension == '.docx':
-                return self._extract_docx_text(file_path)
-            elif extension in ['.txt', '.md']:
-                return self._extract_plain_text(file_path)
-            else:
-                raise ValueError(f"Unsupported file type: {extension}")
+    print("Testing PersonalRAG with FileManager")
 
-        except Exception as e:
-            print(f"❌ Error extracting text from {file_path.name}: {e}")
-            return ""
+    rag = PersonalRAG(force_reload=True)
 
+    # Test stats
+    stats = rag.get_knowledge_stats()
+    print(f"\nKnowledge Stats: {stats}")
 
-    def _extract_pdf_text(self, file_path):
-        """Extract text from PDF files"""
+    # Test search
+    if stats['knowledge_loaded']:
+        test_queries = [
+            "programming languages",
+            "education background",
+            "project experience"
+        ]
 
-        text = ""
+        for query in test_queries:
+            print(f"\n🔍 Searching: {query}")
+            results = rag.search_documents(query, top_k=3)
 
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-
-            for page_num in range(len(pdf_reader.pages)):
-                page = pdf_reader.pages[page_num]
-                text += page.extract_text() + "\n"
-
-        return text
+            for i, result in enumerate(results):
+                print(f"   {i + 1}. {result['source']} (score: {result['distance']:.3f})")
+                print(f"      {result['content'][:100]}...")
 
 
-    def _extract_docx_text(self, file_path):
-        """Extract text from Word documents"""
-
-        try:
-            import docx
-            doc = docx.Document(file_path)
-
-            text = ""
-            for paragraph in doc.paragraphs:
-                text += paragraph.text + "\n"
-
-            return text
-
-        except ImportError:
-            print("❌ python-docx not installed. Install with: pipenv install python-docx")
-            return ""
-
-
-    def _extract_plain_text(self, file_path):
-        """Extract text from plain text files"""
-
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return f.read()
-
-
-    def _infer_doc_type(self, filename):
-        """Guess document type from filename"""
-
-        filename_lower = filename.lower()
-
-        if any(word in filename_lower for word in ['resume', 'cv']):
-            return 'resume'
-        elif any(word in filename_lower for word in ['project', 'portfolio', 'work']):
-            return 'projects'
-        elif any(word in filename_lower for word in ['skill', 'technical', 'tech']):
-            return 'skills'
-        elif any(word in filename_lower for word in ['personal', 'statement', 'cover', 'letter']):
-            return 'personal_statement'
-        elif any(word in filename_lower for word in ['about', 'bio', 'background', 'introduction', 'intro']):
-            return 'about_me'
-        elif any(word in filename_lower for word in ['education', 'school', 'university']):
-            return 'education'
-        elif any(word in filename_lower for word in ['transcript']):
-            return 'transcript'
-        else:
-            return 'general'
+if __name__ == "__main__":
+    test_personal_rag()

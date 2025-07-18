@@ -25,7 +25,7 @@ class DocumentManager:
         # Look for the JobFlow root by finding specific markers
         for parent in current_path.parents:
             # Check if this looks like the JobFlow root
-            if (parent / "data").exists() or parent.name == "JobFlow" or (parent / "integration").exists():
+            if (parent / "data").exists() or parent.name == "JobFlow" or (parent / "job_integration").exists():
                 return parent
 
         # Fallback: assume we're in a subdirectory of JobFlow

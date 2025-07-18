@@ -2,14 +2,12 @@ import asyncio
 from dotenv import load_dotenv
 from browser_use import Agent
 from browser_use.llm import ChatGroq
-from datetime import datetime
 from pathlib import Path
 import sys
 import os
 
 sys.path.append(str(Path(__file__).parent.parent))
-from integration.job_rag_integration import JobRAGIntegration
-from automation.document_manager import DocumentManager
+from utility.document_manager import DocumentManager
 from utility.text_styles import header, success, info, warning, error
 
 

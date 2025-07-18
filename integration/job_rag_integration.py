@@ -35,7 +35,7 @@ class JobRAGIntegration:
             temperature=0.3
         )
 
-        # Load all integration prompts from files
+        # Load all job_integration prompts from files
         self.prompts = self._load_all_integration_prompts()
 
         print("✅ Complete Job-RAG Integration System ready!")
@@ -69,7 +69,7 @@ class JobRAGIntegration:
 
         try:
             # Load from main prompts directory (jobflow/prompts/)
-            prompts_dir = Path(__file__).parent.parent / "prompts" / "integration"
+            prompts_dir = Path(__file__).parent.parent / "prompts" / "job_integration"
             prompt_file = prompts_dir / filename
 
             with open(prompt_file, 'r', encoding='utf-8') as f:
@@ -289,7 +289,7 @@ class JobRAGIntegration:
 
 
 def test_complete_integration():
-    """Test the complete integration system with enhanced presentation"""
+    """Test the complete job_integration system with enhanced presentation"""
 
     num_of_seperation_chars = 70
     print(header("Complete Job-RAG Integration System Test"))
