@@ -15,33 +15,46 @@ EchoCV creates an AI assistant that knows everything about your professional bac
 
 ## System Architecture
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   User Query    │───▶│   Streamlit UI   │───▶│ Personal       │
-│                 │    │                  │    │ Chatbot         │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                                                         │
-                                                         ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Document      │───▶│   File Manager   │───▶│ Personal RAG   │
-│   Files         │    │                  │    │ System          │
-│ (.pdf/.txt/.md) │    │ - Text Extract   │    └─────────────────┘
-└─────────────────┘    │ - Type Detection │             │
-                       │ - Validation     │             ▼
-                       └──────────────────┘    ┌─────────────────┐
-                                               │ ChromaDB        │
-┌─────────────────┐    ┌──────────────────┐    │ Vector Store    │
-│   Prompt        │───▶│  LangChain       │◀──┤                 │
-│   Templates     │    │  Chain           │    │ - Embeddings    │
-│                 │    │                  │    │ - Similarity    │
-└─────────────────┘    │ prompt│llm│parser│    │ - Search        │
-                       └──────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌──────────────────┐
-                       │   Groq LLM       │
-                       │ (llama-3.1-8b)   │
-                       └──────────────────┘
+```mermaid
+graph TB
+    A[User Query] --> B[Streamlit UI]
+    B --> C[Personal Chatbot]
+    
+    D[Document Files<br/>PDF/TXT/MD/DOCX] --> E[File Manager]
+    E --> |Text Extraction<br/>Type Detection<br/>Validation| F[Personal RAG System]
+    
+    G[Prompt Templates] --> H[LangChain Chain<br/>prompt → llm → parser]
+    
+    C --> H
+    F --> |Search Context| H
+    
+    F --> I[ChromaDB Vector Store]
+    I --> |Embeddings<br/>Similarity Search| F
+    
+    H --> J[Groq LLM<br/>llama-3.1-8b]
+    J --> |Generated Response| B
+    B --> |Display Answer| A
+    
+    subgraph "Document Processing"
+        D
+        E
+    end
+    
+    subgraph "RAG System"
+        F
+        I
+    end
+    
+    subgraph "AI Generation"
+        G
+        H
+        J
+    end
+    
+    subgraph "User Interface"
+        A
+        B
+    end
 ```
 
 
