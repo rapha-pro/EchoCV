@@ -25,5 +25,5 @@ EXPOSE 8501
 # Command to run when container starts
 # server.port=8501 is the default port for Streamlit
 # server.address=0.0.0 allows access from outside the container
-CMD ["streamlit", "run", "streamlit_app/personal_ai_assistant.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "streamlit_app/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
 
