@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+requirements.txt
+
+# Environments
+.env**
+.venv**
+env/
+venv/
+ENV/
+venv.bak/
+
+# PyCharm
+.idea/
+
+# logs
+log**/
+
+notes**/*
+data/personal_data
+data/rag_knowledge_base_cache
+rag_system/prompts
+
+# git
+.git
