@@ -98,10 +98,11 @@ graph TB
 ### Personal Information
 Update `.env` with your details:
 ```bash
+GROQ_API_KEY=your_api_key_here
+
 PERSONAL_FIRST_NAME=John
 PERSONAL_LAST_NAME=Doe
 PERSONAL_EMAIL=john@example.com
-GROQ_API_KEY=your_api_key_here
 ```
 
 ### Customize Name
