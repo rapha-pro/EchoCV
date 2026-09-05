@@ -8,9 +8,9 @@ EchoCV creates an AI assistant that knows everything about your professional bac
 ## Features
 
 ### Core Functionality
-- **Interactive Resume Chat**: Visitors ask questions and get personalized responses about your background
-- **Document Processing**: Automatically processes PDFs, Word docs, text files from your personal data
-- **Smart Search**: Vector-based semantic search through your professional information
+- **Interactive Resume Chat**: Visitors can ask questions and get personalized responses about my background
+- **Document Processing**: Automatically processes PDFs, Word docs, text files from personal data
+- **Smart Search**: Vector-based semantic search through my professional information
 - **Configurable Identity**: Easy name and personal information management
 
 ## System Architecture
